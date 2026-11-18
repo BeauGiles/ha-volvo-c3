@@ -259,7 +259,6 @@ def test_enum_states_are_lowercase_keys_with_translations(monkeypatch):
         translated = json.loads((root / path).read_text())["entity"]["sensor"]
         for key in ("charging_status", "charger_connection", "usage_mode"):
             assert set(translated[key]["state"]) == set(by_key[key].options), f"{path}: {key}"
-||||||| 05f4c3b
 
 # ---- connection sensor ------------------------------------------------------------------------------------------
 
