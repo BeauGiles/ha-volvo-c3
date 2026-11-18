@@ -162,18 +162,37 @@ def reason_text(raw: dict[str, Any] | None) -> str:
     return _REASONS.get(key, key.lower().replace("_", " "))
 
 
-def status_text(st: CarStatus) -> str:
-    """One sentence for a person or the voice assistant (state of the Connection sensor, max 255 characters).
+_SHORT_REASONS = {
+    "NO_INTERNET": "no internet",
+    "POWER_SAVING_MODE": "power saving",
+    "CAR_IN_USE": "car in use",
+    "CAR_IN_REMOTE_USE": "in use from the app",
+}
 
-    No clock time in it: a changing sentence would add a history entry on every update. The time is the
-    Last seen sensor and the Connection sensor's ``offline_since`` attribute.
+
+def status_text(st: CarStatus) -> str:
+    """Short state of the Connection sensor: "Online", "Offline: car in use" or "Unknown".
+
+    Short and free of clock times so the history stays quiet; the explanation and the time are attributes
+    (``status_detail``, ``offline_since``) and the Last seen sensor.
     """
     if st.online is None:
-        return "Unknown: Volvo does not say whether the car is online."
+        return "Unknown"
     if st.online:
-        return "Online: the car can receive commands."
+        return "Online"
+    key = str((st.raw or {}).get("unavailableReason") or "").upper().replace("UNAVAILABLE_REASON_", "")
+    short = _SHORT_REASONS.get(key) if key and key != "UNSPECIFIED" else None
+    return f"Offline: {short or 'no connection'}"
+
+
+def status_detail(st: CarStatus) -> str:
+    """The longer explanation, for the Connection sensor's ``detail`` attribute."""
+    if st.online is None:
+        return "Volvo does not say whether the car is online."
+    if st.online:
+        return "The car can receive commands."
     why = reason_text(st.raw) or "no connection to the car"
-    return f"Offline: {why}. Commands cannot reach the car until it is online again."
+    return f"{why[0].upper()}{why[1:]}. Commands cannot reach the car until it is online again."
 
 
 def ensure_car_online(coordinator: Any) -> None:
