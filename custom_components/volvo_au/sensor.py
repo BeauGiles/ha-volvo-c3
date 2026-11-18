@@ -36,7 +36,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import VolvoCoordinator
-from .entity import VolvoEntity, async_gate_unsupported
+from .entity import VolvoEntity, async_gate_unsupported, async_remove_registered_entities
 from . import journal
 from .online import car_status, status_text
 from .volvo_api import VolvoApiError
@@ -241,15 +241,6 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda s: _path(s, "target_soc", "targetSoc", "batteryChargeTargetLevel"),
     ),
-    VolvoSensorDescription(
-        key="amp_limit",
-        requires_data="amp_limit",
-        requires_capability="supportsChargeAmperageLimitSetting",
-        translation_key="amp_limit",
-        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
-        state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda s: _path(s, "amp_limit", "ampLimit", "ampLimit"),
-    ),
     # Usage / availability
     VolvoSensorDescription(
         key="usage_mode",
@@ -332,6 +323,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: VolvoCoordinator = hass.data[DOMAIN][entry.entry_id]
+    # Replaced by the Charge current limit number (19 Nov 2026).
+    async_remove_registered_entities(hass, "sensor", [f"{DOMAIN}_{coordinator.client.vin}_amp_limit"])
     async_add_entities(async_gate_unsupported(hass, coordinator, "sensor", [VolvoSensor(coordinator, d) for d in SENSORS]))
     if car_battery_capacity_kwh(coordinator.car_info):
         async_add_entities([VolvoBatteryCapacity(coordinator)])

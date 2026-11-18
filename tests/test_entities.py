@@ -29,6 +29,10 @@ class FakeRegistry:
     def async_get(self, entity_id):
         return self.entries.get(entity_id)
 
+    def async_remove(self, entity_id):
+        self.removed = getattr(self, "removed", []) + [entity_id]
+        del self.entries[entity_id]
+
     def async_update_entity(self, entity_id, *, disabled_by):
         self.updates.append((entity_id, disabled_by))
         self.entries[entity_id].disabled_by = disabled_by
@@ -198,3 +202,19 @@ def test_gate_hides_entities_whose_section_was_empty(monkeypatch):
 def test_schedule_times_follow_the_schedule_switch(volvo):
     assert volvo.time.VolvoScheduleTime.requires_capability == volvo.switch.VolvoChargeScheduleSwitch.requires_capability
     assert volvo.time.VolvoScheduleTime.requires_data == volvo.switch.VolvoChargeScheduleSwitch.requires_data
+
+
+# ---- removed duplicates ---------------------------------------------------------------------------------------
+
+
+def test_duplicates_are_gone_and_their_registry_entries_cleaned(monkeypatch):
+    registry = FakeRegistry({"sensor.old": SimpleNamespace(unique_id="u", disabled_by=None)})
+    volvo = load_volvo(monkeypatch, registry)
+
+    assert "amp_limit" not in {d.key for d in volvo.sensor.SENSORS}
+    assert {spec[0] for spec in volvo.button.COMMAND_BUTTONS}.isdisjoint({"charge_start", "charge_stop"})
+    # The Target SoC sensor stays: user automations read it.
+    assert "target_soc" in {d.key for d in volvo.sensor.SENSORS}
+
+    volvo.entity.async_remove_registered_entities(None, "sensor", ["u", "missing"])
+    assert registry.removed == ["sensor.old"]
