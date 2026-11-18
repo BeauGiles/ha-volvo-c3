@@ -661,7 +661,7 @@ class VolvoSoftwareVersion(VolvoEntity, SensorEntity):
 
 
 class VolvoConnection(VolvoEntity, SensorEntity):
-    """The car connection in one plain sentence, e.g. \"Offline since 19:32: the car has no mobile internet\".
+    """The car connection in one plain sentence, e.g. \"Offline: the car has no mobile internet\".
 
     The voice assistant reads states, not attributes, so the reason is in the state.
     """
@@ -677,6 +677,13 @@ class VolvoConnection(VolvoEntity, SensorEntity):
     @property
     def native_value(self) -> str:
         return status_text(car_status(self.coordinator.data))[:255]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        st = car_status(self.coordinator.data)
+        if st.online is False and st.last_seen is not None:
+            return {"offline_since": st.last_seen.isoformat()}
+        return {}
 
 
 class VolvoLastSeen(VolvoEntity, SensorEntity):

@@ -163,14 +163,17 @@ def reason_text(raw: dict[str, Any] | None) -> str:
 
 
 def status_text(st: CarStatus) -> str:
-    """One sentence for a person or the voice assistant (state of the Connection sensor, max 255 characters)."""
+    """One sentence for a person or the voice assistant (state of the Connection sensor, max 255 characters).
+
+    No clock time in it: a changing sentence would add a history entry on every update. The time is the
+    Last seen sensor and the Connection sensor's ``offline_since`` attribute.
+    """
     if st.online is None:
         return "Unknown: Volvo does not say whether the car is online."
     if st.online:
         return "Online: the car can receive commands."
-    when = f" since {dt_util.as_local(st.last_seen).strftime('%H:%M')}" if st.last_seen is not None else ""
     why = reason_text(st.raw) or "no connection to the car"
-    return f"Offline{when}: {why}. Commands cannot reach the car until it is online again."
+    return f"Offline: {why}. Commands cannot reach the car until it is online again."
 
 
 def ensure_car_online(coordinator: Any) -> None:
