@@ -99,6 +99,7 @@ class VolvoSensorDescription(SensorEntityDescription):
     value_fn: Callable[[dict[str, Any]], Any]
     requires_combustion_engine: bool = False
     requires_capability: str | None = None
+    requires_data: str | None = None
 
 
 def _tyre(wheel: str, label: str) -> VolvoSensorDescription:
@@ -233,6 +234,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
     # Charge target / amp limit
     VolvoSensorDescription(
         key="target_soc",
+        requires_data="target_soc",
         requires_capability="supportsTargetChargeLevelSetting",
         translation_key="target_soc",
         native_unit_of_measurement=PERCENTAGE,
@@ -241,6 +243,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
     ),
     VolvoSensorDescription(
         key="amp_limit",
+        requires_data="amp_limit",
         requires_capability="supportsChargeAmperageLimitSetting",
         translation_key="amp_limit",
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
@@ -251,6 +254,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
     VolvoSensorDescription(
         key="usage_mode",
         translation_key="usage_mode",
+        entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:car-info",
         value_fn=lambda s: _pretty_enum(
             _path(s, "availability", "availability", "usageMode"),
@@ -286,6 +290,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
     VolvoSensorDescription(
         key="engine_hours_to_service",
         translation_key="engine_hours_to_service",
+        entity_category=EntityCategory.DIAGNOSTIC,
         requires_combustion_engine=True,
         native_unit_of_measurement=UnitOfTime.HOURS,
         device_class=SensorDeviceClass.DURATION,
@@ -295,6 +300,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
     # Air purification
     VolvoSensorDescription(
         key="air_quality_index",
+        requires_data="pre_cleaning",
         requires_capability="supportsAirPurificationInternalMeasurement",
         translation_key="air_quality_index",
         state_class=SensorStateClass.MEASUREMENT,
@@ -304,8 +310,10 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
     ),
     VolvoSensorDescription(
         key="air_purification_last_cycle",
+        requires_data="pre_cleaning",
         requires_capability="supportsAirPurification",
         translation_key="air_purification_last_cycle",
+        entity_category=EntityCategory.DIAGNOSTIC,
         device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=lambda s: _epoch_to_dt(
             _path(s, "pre_cleaning", "preCleaning", "lastCycleCompleted", "seconds")
@@ -362,6 +370,7 @@ class VolvoSensor(VolvoEntity, SensorEntity):
         self.entity_description = description
         self.requires_combustion_engine = description.requires_combustion_engine
         self.requires_capability = description.requires_capability
+        self.requires_data = description.requires_data
         self._attr_unique_id = f"{DOMAIN}_{coordinator.client.vin}_{description.key}"
 
     @property
