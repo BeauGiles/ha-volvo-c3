@@ -18,6 +18,23 @@ POLL_ACTIVE = 60      # 1 min when "interesting" (charging, doors open, recent c
 POLL_POST_CMD_FAST = 5  # 5 s polls for the first minute after a command
 POLL_POST_CMD_WINDOW = 60
 
+# Live-push streams (battery, exterior, parking climatization, pre-cleaning):
+# the REST poll above still runs as a fallback, but these update as the
+# backend reports them rather than waiting for the next poll.
+#
+# It isn't yet known, for a given endpoint, whether the backend keeps a
+# subscription open and pushes further frames on its own, or sends one frame
+# and closes (observed on Polestar's equivalent C3 streams, which replay
+# their snapshot and close every ~120s). STREAM_MIN_RESUBSCRIBE_INTERVAL
+# covers the second case: a clean close is followed by a short wait, then a
+# resubscribe, rather than being treated as a failure. Tune this down if logs
+# show the backend closing cleanly every time (i.e. this becomes the de facto
+# poll interval for these four), or up if Volvo's gateway complains about
+# reconnect frequency.
+STREAM_MIN_RESUBSCRIBE_INTERVAL = 15  # seconds, after a clean close with data
+STREAM_RETRY_DELAY = 10  # seconds (initial backoff after an error, doubles each retry)
+STREAM_MAX_RETRIES = 10  # consecutive failures before giving up on a stream for this session
+
 # Volvo OAuth / API
 ISSUER = "https://volvoid.eu.volvocars.com"
 TOKEN_URL = f"{ISSUER}/as/token.oauth2"

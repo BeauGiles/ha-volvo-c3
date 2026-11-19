@@ -49,14 +49,24 @@ Personal project. Use at your own risk. Reverse-engineered from the iOS app; Vol
 
 Every command shows an error in Home Assistant when Volvo refuses it or does not answer, and is refused before it is sent while Volvo reports the car offline. (Volvo's server answers HTTP 200 to a command even when the car is offline, so without this check a command could silently do nothing.)
 
-### Adaptive polling
+### Live push + adaptive polling
+
+Battery, exterior (locks/doors/windows), climate, and pre-cleaning update live:
+the integration keeps a streaming connection open to Volvo's cloud for each
+and pushes a sensor update as soon as the backend reports one, instead of
+waiting for the next poll.
+
+Everything else (odometer, health, availability, target SoC, amp limit,
+charge timer, last-parked location, software info, weather) is still on the
+adaptive poll, which also runs as a fallback for the four streamed values if
+their connection drops and can't reconnect:
 
 - **5 min** when idle
 - **1 min** when active (charging, doors open, climate on, car in use)
 - **5 sec for 5 min** after a trip ends (until you lock the car)
 - **5 sec for 60 sec** burst after any command
 
-None of this polling wakes the car — Volvo's cloud reads cached telemetry the car pushes opportunistically.
+None of this polling or streaming wakes the car — Volvo's cloud reads cached telemetry the car pushes opportunistically.
 
 ## Install
 

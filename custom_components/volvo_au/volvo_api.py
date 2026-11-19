@@ -6,7 +6,11 @@ Design:
 - DPoP private key + refresh token live in the config entry (HA encrypts at rest)
 - access_token is in-memory only, refreshed via DPoP-bound refresh_token
 - data endpoints use plain Bearer (the iOS gateway does not require DPoP there)
-- ndjson "stream" endpoints are read first-frame-then-close (= snapshot poll)
+- ndjson "stream" endpoints: _ndjson_first_frame (snapshot poll) reads one frame
+  and closes; _ndjson_stream keeps the connection open and yields every frame
+  the backend sends, for a handful of endpoints (battery, exterior, parking
+  climatization, pre-cleaning) the coordinator subscribes to for live push
+  instead of polling.
 - Lock/Unlock use hand-rolled protobuf in a gRPC frame
 """
 
@@ -20,6 +24,7 @@ import logging
 import struct
 import time
 import uuid
+from collections.abc import AsyncIterator
 from typing import Any
 from urllib.parse import urlencode, urlparse
 
@@ -510,6 +515,37 @@ class VolvoClient:
                     return json.loads(line)
         raise VolvoApiError(f"No data from {path}")
 
+    async def _ndjson_stream(
+        self, path: str, body: dict[str, Any]
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Like _ndjson_first_frame, but stays connected and yields every frame.
+
+        These are genuine server-streaming gRPC endpoints — _ndjson_first_frame
+        reading one line and disconnecting is what turned them into a snapshot
+        poll in the first place. Whether the backend then pushes further frames
+        on its own, or closes after one and expects a resubscribe, isn't known
+        yet; the caller (coordinator._async_run_stream) handles both by treating
+        a clean close as "resubscribe", not as an error.
+        """
+        headers = await self._auth_headers()
+        headers.update(
+            {
+                "Accept": "application/x-ndjson",
+                "Content-Type": "application/x-ndjson",
+                "vin": self.vin,
+            }
+        )
+        async with self._session.post(
+            API_BASE + path, headers=headers, data=json.dumps(body)
+        ) as r:
+            if r.status != 200:
+                txt = await r.text()
+                raise VolvoApiError(f"POST {path}: {r.status} {txt[:200]}")
+            async for raw in r.content:
+                line = raw.strip()
+                if line:
+                    yield json.loads(line)
+
     # -------- protobuf / gRPC bits (same as sync client) --------
 
     @staticmethod
@@ -740,6 +776,13 @@ class VolvoClient:
             self._vid_body(),
         )
 
+    async def stream_battery(self) -> AsyncIterator[dict[str, Any]]:
+        async for frame in self._ndjson_stream(
+            "/services.vehiclestates.battery.BatteryService/GetBattery",
+            self._vid_body(),
+        ):
+            yield frame
+
     async def get_odometer(self) -> dict[str, Any]:
         return await self._ndjson_first_frame(
             "/services.vehiclestates.odometer.OdometerService/GetOdometer",
@@ -751,6 +794,13 @@ class VolvoClient:
             "/services.vehiclestates.exterior.ExteriorService/GetExterior",
             self._vid_body(),
         )
+
+    async def stream_exterior(self) -> AsyncIterator[dict[str, Any]]:
+        async for frame in self._ndjson_stream(
+            "/services.vehiclestates.exterior.ExteriorService/GetExterior",
+            self._vid_body(),
+        ):
+            yield frame
 
     async def get_health(self) -> dict[str, Any]:
         return await self._ndjson_first_frame(
@@ -771,11 +821,26 @@ class VolvoClient:
             self._vid_body(),
         )
 
+    async def stream_parking_climatization(self) -> AsyncIterator[dict[str, Any]]:
+        async for frame in self._ndjson_stream(
+            "/services.vehiclestates.parkingclimatization."
+            "ParkingClimatizationService/GetParkingClimatization",
+            self._vid_body(),
+        ):
+            yield frame
+
     async def get_pre_cleaning(self) -> dict[str, Any]:
         return await self._ndjson_first_frame(
             "/services.vehiclestates.precleaning.PreCleaningService/GetPreCleaning",
             self._vid_body(),
         )
+
+    async def stream_pre_cleaning(self) -> AsyncIterator[dict[str, Any]]:
+        async for frame in self._ndjson_stream(
+            "/services.vehiclestates.precleaning.PreCleaningService/GetPreCleaning",
+            self._vid_body(),
+        ):
+            yield frame
 
     async def get_last_parked_location(self) -> dict[str, Any] | None:
         """Read the most recent parked GPS coordinate via gRPC streaming.
