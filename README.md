@@ -125,9 +125,7 @@ During config-flow, you'll be sent to Volvo ID in a browser to sign in (+ 2FA). 
 
 ## ☕ Support
 
-If this saved you some time (or you just like that the integration exists) and you’d like to support me, feel free to lob a coffee my way.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/J4Y420EISJ)
+If this saved you some time and you'd like to support me, you can leave a tip at [b3.au/tip-jar](https://b3.au/tip-jar).
 
 ## License
 
