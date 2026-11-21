@@ -65,8 +65,9 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | Open and close tailgate | ✅ | ➖ |
 | Flash lights, honk, honk and flash | ✅ | ✅ |
 | Open and close all windows | ✅ | ✅ |
-| Start and stop climate, target temperature | 🧪 | ✅ |
-| Seat and steering wheel heating | 🧪 | ✅ |
+| Start and stop climate | ✅ | ✅ |
+| Climate target temperature | ◐ | ◐ |
+| Seat and steering wheel heating | 🧪 ◐ | ◐ |
 | Engine remote start (starts cabin climate on an EV) | ✅ | ➖ |
 | Air purification | ✅ | ✅ |
 | Target SoC, charging amp limit | ✅ | ✅ |
