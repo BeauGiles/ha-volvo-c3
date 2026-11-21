@@ -17,7 +17,7 @@ The matching integration for Polestar cars is [Polestar C3](https://github.com/B
 
 ## Supported cars
 
-Built and tested on an **XC40 Recharge**. The integration uses Volvo's C3 platform, the same one the Volvo Cars app uses, so other Volvo cars on that platform should work, but features differ between models and not every model has been tested. The integration asks the car which features it supports and hides the rest, so a missing entity usually means the car doesn't offer it. For example, the XC40 reports no tyre pressures and no climate settings.
+Built and tested on an **Australian Volvo XC40 Recharge (2023)**. The integration uses Volvo's C3 platform, the same one the Volvo Cars app uses, so other Volvo cars on that platform should work, but features differ between models and not every model has been tested. The integration asks the car which features it supports and hides the rest, so a missing entity usually means the car doesn't offer it. For example, the XC40 reports no tyre pressures and no climate settings.
 
 Reports of what works and what doesn't on your model are welcome. Please [open an issue](https://github.com/BeauGiles/ha-volvo-c3/issues).
 
@@ -201,7 +201,7 @@ Download diagnostics from **Settings → Devices & Services → Volvo C3 → ⋮
 
 ## For developers
 
-The code that speaks to Volvo's servers is in `custom_components/volvo_au/volvo_api.py`. It talks to the same backend the Volvo Cars iOS app uses (`cepmobtoken.kr.prod.c3.volvocars.com`). Run `uv run --with pytest --with voluptuous pytest -q` for the tests. A design for sharing the backend code with Polestar C3 is in [docs/design-shared-c3-library.md](docs/design-shared-c3-library.md).
+The code that speaks to Volvo's servers is in `custom_components/volvo_au/volvo_api.py`. It talks to the same backend the Volvo Cars iOS app uses. Run `uv run --with pytest --with voluptuous pytest -q` for the tests. A design for sharing the backend code with Polestar C3 is in [docs/design-shared-c3-library.md](docs/design-shared-c3-library.md).
 
 ## ☕ Support
 
