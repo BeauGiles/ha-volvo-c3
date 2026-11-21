@@ -141,7 +141,7 @@ This project is independent. It is not affiliated with, authorised by, endorsed 
 - **Terms of service.** Using it may breach the Volvo Cars terms of service in some regions, and could lead to your account being limited or blocked. Consider using a secondary account that has been given access to your car, not your main one.
 - **It controls a real car.** Commands such as lock, unlock, start climate and start charging act on your actual vehicle. You are responsible for how you use them, and for automations you build on them. Do not rely on this for anything safety critical.
 - **Your credentials.** Sign-in tokens are stored in your Home Assistant configuration. Protect your Home Assistant backups and access accordingly.
-- **No warranty and no support from Volvo.** It is provided as is, as set out in the licence. **Please do not contact Volvo Cars or your dealer for help with this integration**; open an issue here instead.
+- **No warranty and no support from Volvo.** Use it at your own risk. It is provided as is, as set out in the licence. The authors are not responsible for any consequences of using it, including vehicle malfunctions, warranty implications or account restrictions. **Please do not contact Volvo Cars or your dealer for help with this integration**; open an issue here instead.
 
 ### Official options
 
