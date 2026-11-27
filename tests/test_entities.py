@@ -215,6 +215,16 @@ def test_poll_replaces_streamed_sections_it_did_read_and_ignores_unstreamed(volv
 # ---- first poll with no data -------------------------------------------------------------------------------------
 
 
+def test_battery_fields_the_car_never_sends_are_hidden(volvo):
+    without = volvo.powertrain.sections_without_data({"battery": {"battery": {"batteryChargeLevelPercentage": 80}}})
+    assert {"battery.chargingType", "battery.chargerPowerStatus"} <= without
+    with_type = {"battery": {"battery": {"batteryChargeLevelPercentage": 80, "chargingType": "CHARGING_TYPE_NONE"}}}
+    assert "battery.chargingType" not in volvo.powertrain.sections_without_data(with_type)
+    # A missing or failed battery read hides nothing.
+    assert not any(n.startswith("battery.") for n in volvo.powertrain.sections_without_data({}))
+    assert not any(n.startswith("battery.") for n in volvo.powertrain.sections_without_data({"battery": {"_error": "x"}}))
+
+
 def test_sections_without_data(volvo):
     full = {
         "pre_cleaning": {"preCleaning": {"runningStatus": "RUNNING_STATUS_OFF"}},
@@ -397,6 +407,22 @@ def test_charge_time_and_climate_sensors_match_polestar(monkeypatch):
     assert by_key["time_to_min_soc"].value_fn(battery) == 7
     assert by_key["time_to_target"].entity_category is EntityCategory.DIAGNOSTIC
 
+    unplugged = {"battery": {"battery": {"batteryChargeLevelPercentage": 80}}}
+    for key in ("time_to_full", "time_to_target", "time_to_min_soc"):
+        assert by_key[key].value_fn(unplugged) == 0  # JSON leaves out zeros; Polestar shows 0 min too
+        assert by_key[key].value_fn({"battery": {}}) is None  # no reply at all stays unknown
+
+    plugged = {"battery": {"battery": {"chargingType": "CHARGING_TYPE_AC",
+                                       "chargerPowerStatus": "CHARGER_POWER_STATUS_PROVIDING_POWER"}}}
+    assert by_key["charging_type"].value_fn(plugged) == "ac"
+    assert by_key["charger_power_status"].value_fn(plugged) == "providing_power"
+    assert by_key["charging_type"].requires_data == "battery.chargingType"
+    # As a real XC40 sends them when unplugged (diagnostics, 27 November).
+    unplugged_xc40 = {"battery": {"battery": {"chargingType": "CHARGING_TYPE_NONE",
+                                              "chargerPowerStatus": "CHARGER_POWER_STATUS_NO_POWER_AVAILABLE"}}}
+    assert by_key["charging_type"].value_fn(unplugged_xc40) == "none"
+    assert by_key["charger_power_status"].value_fn(unplugged_xc40) == "no_power"
+
     def climate(**pc):
         return {"parking_climatization": {"parkingClimatization": pc}}
 
@@ -420,3 +446,62 @@ def test_charge_time_and_climate_sensors_match_polestar(monkeypatch):
     assert by_key["climate_time_remaining"].value_fn({}) is None
     for key in ("climate_running_status", "climate_request_type"):
         assert set(by_key[key].options) >= {"undefined"}
+
+
+# The XC40's own replies, from its diagnostics on 27 November 2026.
+XC40_BATTERY = {"batteryChargeLevelPercentage": 85.0, "chargingType": "CHARGING_TYPE_NONE",
+                "chargerPowerStatus": "CHARGER_POWER_STATUS_NO_POWER_AVAILABLE",
+                "coldBatteryStatus": "COLD_BATTERY_STATUS_UNSPECIFIED"}
+XC40_ODOMETER = {"odometerMeters": 57120700, "averageSpeedKmPerHour": 48, "averageSpeedKmPerHourAutomatic": 35}
+
+
+def test_cold_battery_is_hidden_on_a_car_that_says_unspecified(volvo):
+    # The XC40 sends UNSPECIFIED, as the Polestar 2 does; a car that supports it says NORMAL.
+    hidden = volvo.powertrain.sections_without_data({"battery": {"battery": XC40_BATTERY},
+                                                     "odometer": {"odometer": XC40_ODOMETER}})
+    assert "battery.coldBatteryStatus" in hidden
+    assert "battery.chargingType" not in hidden and "battery.chargerPowerStatus" not in hidden
+    assert "odometer.averageSpeedKmPerHourAutomatic" not in hidden
+    normal = {"battery": {"battery": {**XC40_BATTERY, "coldBatteryStatus": "COLD_BATTERY_STATUS_NORMAL"}}}
+    assert "battery.coldBatteryStatus" not in volvo.powertrain.sections_without_data(normal)
+    by_key = {d.key: d for d in volvo.sensor.SENSORS}
+    assert by_key["cold_battery_status"].value_fn(normal) == "normal"
+    assert by_key["cold_battery_status"].requires_data == "battery.coldBatteryStatus"
+
+
+def test_average_speed_auto(volvo):
+    by_key = {d.key: d for d in volvo.sensor.SENSORS}
+    assert by_key["avg_speed_auto"].value_fn({"odometer": {"odometer": XC40_ODOMETER}}) == 35
+    no_auto = {"odometer": {"odometer": {"odometerMeters": 1, "averageSpeedKmPerHour": 48}}}
+    assert "odometer.averageSpeedKmPerHourAutomatic" in volvo.powertrain.sections_without_data(no_auto)
+
+
+@pytest.mark.parametrize(
+    ("availability", "expected"),
+    [
+        ({"availabilityStatus": "AVAILABILITY_STATUS_AVAILABLE", "unavailableReason": "UNAVAILABLE_REASON_UNSPECIFIED"}, "none"),
+        ({"availabilityStatus": "AVAILABILITY_STATUS_UNAVAILABLE", "unavailableReason": "UNAVAILABLE_REASON_POWER_SAVING_MODE"}, "power_saving_mode"),
+        ({"availabilityStatus": "AVAILABILITY_STATUS_UNAVAILABLE", "unavailableReason": "UNAVAILABLE_REASON_NO_INTERNET"}, "no_internet"),
+        ({}, None),
+    ],
+)
+def test_unavailable_reason(volvo, availability, expected):
+    assert volvo.sensor.unavailable_reason({"availability": {"availability": availability}}) == expected
+
+
+def test_any_door_open_and_climate_active(volvo):
+    closed = {d: "OPEN_STATUS_CLOSED" for d in ("frontLeftDoor", "frontRightDoor", "rearLeftDoor", "rearRightDoor")}
+    snap = {"exterior": {"exterior": {**closed, "tailgate": "OPEN_STATUS_OPEN"}}}
+    assert volvo.binary_sensor.any_door_open(snap) is False  # the boot is not a door
+    snap["exterior"]["exterior"]["rearLeftDoor"] = "OPEN_STATUS_OPEN"
+    assert volvo.binary_sensor.any_door_open(snap) is True
+    assert volvo.binary_sensor.any_door_open({}) is None
+
+    def pc(status):
+        return {"parking_climatization": {"parkingClimatization": {"runningStatus": status}}}
+
+    assert volvo.binary_sensor.climate_active(pc("RUNNING_STATUS_ON")) is True
+    assert volvo.binary_sensor.climate_active(pc("RUNNING_STATUS_OFF")) is False
+    assert volvo.binary_sensor.climate_active({}) is None
+    by_key = {d.key: d for d in volvo.binary_sensor.DESCRIPTIONS}
+    assert by_key["climate_active"].requires_data == "parking_climatization"

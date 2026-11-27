@@ -267,6 +267,19 @@ def light_status(light_warnings: Any) -> tuple[bool | None, dict[str, str]]:
 
 # Snapshot sections whose entities are hidden when the first poll comes back with nothing in them at all.
 WATCHED_SECTIONS = ("pre_cleaning", "global_charge_timer", "amp_limit", "target_soc", "parking_climatization")
+# Fields that not every car sends, as (section, record, field). The entity is hidden when the first reply for
+# that section has data but leaves the field out or says ``..._UNSPECIFIED`` (a car that supports cold battery
+# status says NORMAL, as on Polestar C3). Named here as ``<section>.<field>``.
+WATCHED_FIELDS = (
+    ("battery", "battery", "chargingType"),
+    ("battery", "battery", "chargerPowerStatus"),
+    ("battery", "battery", "coldBatteryStatus"),
+    ("odometer", "odometer", "averageSpeedKmPerHourAutomatic"),
+)
+
+
+def _field_missing(value) -> bool:
+    return value in (None, "") or (isinstance(value, str) and value.upper().endswith("_UNSPECIFIED"))
 
 
 def has_data(value) -> bool:
@@ -288,6 +301,11 @@ def sections_without_data(snapshot) -> frozenset:
             continue
         if not has_data(section):
             empty.add(name)
+    for name, record_key, field in WATCHED_FIELDS:
+        section = snapshot.get(name)
+        record = section.get(record_key) if isinstance(section, dict) else None
+        if isinstance(record, dict) and has_data(record) and _field_missing(record.get(field)):
+            empty.add(f"{name}.{field}")
     return frozenset(empty)
 
 
