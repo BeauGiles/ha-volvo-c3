@@ -357,6 +357,27 @@
       "charge_schedule_stop": {
         "name": "Charging schedule end"
       }
+    },
+    "update": {
+      "software_update": {
+        "name": "Software update"
+      }
+    }
+  },
+  "services": {
+    "cancel_ota": {
+      "name": "Cancel scheduled software update",
+      "description": "Cancels a scheduled software update install."
+    },
+    "schedule_ota": {
+      "name": "Schedule software update",
+      "description": "Schedules the install of the software update the car has downloaded, as in the Volvo app. The car must be parked and not charging when it starts.",
+      "fields": {
+        "delay_minutes": {
+          "name": "Delay",
+          "description": "Minutes from now (0 starts it as soon as the car allows)."
+        }
+      }
     }
   }
 }

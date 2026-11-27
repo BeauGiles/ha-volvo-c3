@@ -13,6 +13,7 @@ from typing import Any
 # re-read on nearly every poll. Anything not listed is read on every poll.
 SLOW_TTLS: dict[str, float] = {
     "software_info": 3600.0,
+    "ota_schedule": 3600.0,
     "weather": 900.0,
     "target_soc": 120.0,
     "amp_limit": 120.0,

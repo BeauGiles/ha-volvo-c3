@@ -8,6 +8,7 @@ Dates are 2026.
 
 ### Added
 
+- **Software update** entity, matching Polestar C3: the update Volvo offers for the car, with its state, schedule and release title. **Install** starts it now, and the `volvo_au.schedule_ota` (delay in minutes) and `volvo_au.cancel_ota` services schedule or cancel it, using the Volvo app's own OTA scheduler (`ota_mobcache.SchedulerService`). The installed version comes from the car record and is kept across restarts. Install is offered only when the car says it allows remote install scheduling (an XC40 does). Reads correctly on an XC40 (5.2.16, up to date); install, schedule and cancel are untested, as no update was waiting.
 - **Battery thermal event** binary sensor (safety): a high-voltage battery thermal event reported by the car (`batteryThermalEventTriggered`, health field 48, as named in the Volvo app, which has a help screen for it). The car leaves the field out when there is no event, so it reads off. Listed under Diagnostic. Matches Polestar C3.
 - **Time to target charge** and **Time to minimum SoC** (diagnostic): the car's own charging time estimates (battery fields 9 and 19, as in the Volvo app). Matches Polestar C3.
 - **Climate running status** (Active, Start attempt, Not running), **Climate request type** (diagnostic: now from car, now from remote, timer, keep climate) and **Climate time remaining**, from the parking climatization record the Climate switch already reads. The state keys match Polestar C3's, so automations read the same on both. Not yet seen from a real car.

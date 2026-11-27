@@ -41,6 +41,7 @@ PLATFORMS: list[Platform] = [
     Platform.SWITCH,
     Platform.TIME,
     Platform.DEVICE_TRACKER,
+    Platform.UPDATE,
 ]
 
 
