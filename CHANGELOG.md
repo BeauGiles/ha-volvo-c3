@@ -4,6 +4,16 @@ All notable changes to Volvo C3 (domain `volvo_au`). This integration and [Poles
 
 Dates are 2026.
 
+## Unreleased
+
+### Added
+
+- **Charging type** (none, AC, DC, wireless) and **Charger power status** sensors, matching Polestar C3 (battery fields 17 and 26). Read as `chargingType` and `chargerPowerStatus`; a car whose battery reply never has them gets them hidden on the first poll, like other features it lacks.
+
+### Fixed
+
+- **Time to full charge**, **Time to target charge** and **Time to minimum SoC** read 0 min when not charging, instead of unknown. Volvo's JSON reply leaves out fields that are 0; Polestar C3 already showed 0.
+
 ## 0.4.0 (27 November)
 
 ### Added

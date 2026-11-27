@@ -33,6 +33,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | --- | :---: | :---: |
 | State of charge, range | ✅ | ✅ |
 | Charging status, power, current, voltage, charger connection | ✅ | ✅ |
+| Charging type, charger power status | 🧪 | ✅ |
 | Time to full charge | ✅ | ✅ |
 | Time to target charge and to minimum SoC | 🧪 | ✅ |
 | Charge port (hidden on Polestar 2, XC40 and C40, where it always reads closed), plugged in | ✅ | ✅ |
@@ -102,7 +103,7 @@ Every command shows an error in Home Assistant when Volvo refuses it or does not
 
 | Platform | Examples |
 | --- | --- |
-| Sensor | State of charge, range, charging status, charger connection, charging power, time to target charge and to minimum SoC, climate running status, request type and time remaining, odometer, trip meters, service sensors, tyre pressures, software version, Connection, Vehicle info, VIN |
+| Sensor | State of charge, range, charging status, charger connection, charging type, charger power status, charging power, time to target charge and to minimum SoC, climate running status, request type and time remaining, odometer, trip meters, service sensors, tyre pressures, software version, Connection, Vehicle info, VIN |
 | Binary sensor | Online, In use, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, bonnet, boot, sunroof, charge port (not on an electric XC40 or C40) |
 | Device tracker | Location |
 | Update | Software update (install now; `schedule_ota` and `cancel_ota` services) |

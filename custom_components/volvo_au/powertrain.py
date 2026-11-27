@@ -267,6 +267,9 @@ def light_status(light_warnings: Any) -> tuple[bool | None, dict[str, str]]:
 
 # Snapshot sections whose entities are hidden when the first poll comes back with nothing in them at all.
 WATCHED_SECTIONS = ("pre_cleaning", "global_charge_timer", "amp_limit", "target_soc", "parking_climatization")
+# Battery fields that not every car sends. The entity is hidden when the first battery reply that has data
+# leaves the field out, named here as ``battery.<field>``.
+WATCHED_BATTERY_FIELDS = ("chargingType", "chargerPowerStatus")
 
 
 def has_data(value) -> bool:
@@ -288,6 +291,10 @@ def sections_without_data(snapshot) -> frozenset:
             continue
         if not has_data(section):
             empty.add(name)
+    battery = snapshot.get("battery")
+    record = battery.get("battery") if isinstance(battery, dict) else None
+    if isinstance(record, dict) and has_data(record):
+        empty.update(f"battery.{field}" for field in WATCHED_BATTERY_FIELDS if record.get(field) in (None, ""))
     return frozenset(empty)
 
 

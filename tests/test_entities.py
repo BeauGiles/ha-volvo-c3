@@ -215,6 +215,16 @@ def test_poll_replaces_streamed_sections_it_did_read_and_ignores_unstreamed(volv
 # ---- first poll with no data -------------------------------------------------------------------------------------
 
 
+def test_battery_fields_the_car_never_sends_are_hidden(volvo):
+    without = volvo.powertrain.sections_without_data({"battery": {"battery": {"batteryChargeLevelPercentage": 80}}})
+    assert {"battery.chargingType", "battery.chargerPowerStatus"} <= without
+    with_type = {"battery": {"battery": {"batteryChargeLevelPercentage": 80, "chargingType": "CHARGING_TYPE_NONE"}}}
+    assert "battery.chargingType" not in volvo.powertrain.sections_without_data(with_type)
+    # A missing or failed battery read hides nothing.
+    assert not any(n.startswith("battery.") for n in volvo.powertrain.sections_without_data({}))
+    assert not any(n.startswith("battery.") for n in volvo.powertrain.sections_without_data({"battery": {"_error": "x"}}))
+
+
 def test_sections_without_data(volvo):
     full = {
         "pre_cleaning": {"preCleaning": {"runningStatus": "RUNNING_STATUS_OFF"}},
@@ -396,6 +406,17 @@ def test_charge_time_and_climate_sensors_match_polestar(monkeypatch):
     assert by_key["time_to_target"].value_fn(battery) == 42
     assert by_key["time_to_min_soc"].value_fn(battery) == 7
     assert by_key["time_to_target"].entity_category is EntityCategory.DIAGNOSTIC
+
+    unplugged = {"battery": {"battery": {"batteryChargeLevelPercentage": 80}}}
+    for key in ("time_to_full", "time_to_target", "time_to_min_soc"):
+        assert by_key[key].value_fn(unplugged) == 0  # JSON leaves out zeros; Polestar shows 0 min too
+        assert by_key[key].value_fn({"battery": {}}) is None  # no reply at all stays unknown
+
+    plugged = {"battery": {"battery": {"chargingType": "CHARGING_TYPE_AC",
+                                       "chargerPowerStatus": "CHARGER_POWER_STATUS_PROVIDING_POWER"}}}
+    assert by_key["charging_type"].value_fn(plugged) == "ac"
+    assert by_key["charger_power_status"].value_fn(plugged) == "providing_power"
+    assert by_key["charging_type"].requires_data == "battery.chargingType"
 
     def climate(**pc):
         return {"parking_climatization": {"parkingClimatization": pc}}

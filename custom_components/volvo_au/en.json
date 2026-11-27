@@ -220,6 +220,16 @@
           "fault": "Fault"
         }
       },
+      "charger_power_status": {
+        "name": "Charger power status",
+        "state": {
+          "no_power": "No power",
+          "initializing": "Initializing",
+          "available_but_inactive": "Available but inactive",
+          "providing_power": "Providing power",
+          "fault": "Fault"
+        }
+      },
       "charging_current": {
         "name": "Charging current"
       },
@@ -237,6 +247,15 @@
           "smart_charging": "Smart charging",
           "done": "Done",
           "smart_charging_paused": "Smart charging paused"
+        }
+      },
+      "charging_type": {
+        "name": "Charging type",
+        "state": {
+          "none": "None",
+          "ac": "AC",
+          "dc": "DC",
+          "wireless": "Wireless"
         }
       },
       "charging_voltage": {

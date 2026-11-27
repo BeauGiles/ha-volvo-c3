@@ -62,6 +62,8 @@ CHARGING_STATUS_OPTIONS = (
     "charging", "idle", "scheduled", "discharging", "error", "smart_charging", "done", "smart_charging_paused",
 )
 CHARGER_CONNECTION_OPTIONS = ("connected", "disconnected", "fault")
+CHARGING_TYPE_OPTIONS = ("none", "ac", "dc", "wireless")
+CHARGER_POWER_STATUS_OPTIONS = ("no_power", "initializing", "available_but_inactive", "providing_power", "fault")
 USAGE_MODE_OPTIONS = ("abandoned", "inactive", "convenience", "active", "driving", "engine_on", "engine_off")
 # Climate states use the Polestar integration's keys, so automations read the same on both: "undefined" is
 # "Not running" (climate off), as it is there.
@@ -98,6 +100,19 @@ def _enum_state(raw: Any, options: tuple[str, ...], *prefixes: str) -> str | Non
         _reported_unknown.add(raw)
         _LOGGER.warning("Volvo reported the state %s, which this integration does not know; showing no state", raw)
     return None
+
+
+def charge_minutes(snap: dict[str, Any], field: str) -> int | None:
+    """A charge-time estimate from the battery reply, or 0 when the reply arrived without it.
+
+    Volvo sends the reply as JSON, which leaves out fields whose value is 0 (not charging), so a missing
+    estimate in a reply that has data means 0 minutes, as the Polestar integration shows it.
+    """
+    record = _path(snap, "battery", "battery")
+    if not isinstance(record, dict) or not record:
+        return None
+    value = record.get(field)
+    return 0 if value is None else value
 
 
 def _climate(snap: dict[str, Any]) -> dict[str, Any] | None:
@@ -201,7 +216,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda s: _path(s, "battery", "battery", "estimatedChargingTimeToFullMinutes"),
+        value_fn=lambda s: charge_minutes(s, "estimatedChargingTimeToFullMinutes"),
     ),
     # Battery fields 9 and 19, as in the Volvo app (and the Polestar integration's sensors of the same name).
     VolvoSensorDescription(
@@ -211,7 +226,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DURATION,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda s: _path(s, "battery", "battery", "estimatedChargingTimeMinutesToTargetDistance"),
+        value_fn=lambda s: charge_minutes(s, "estimatedChargingTimeMinutesToTargetDistance"),
     ),
     VolvoSensorDescription(
         key="time_to_min_soc",
@@ -220,7 +235,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DURATION,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda s: _path(s, "battery", "battery", "estimatedChargingTimeMinutesToMinimumSoc"),
+        value_fn=lambda s: charge_minutes(s, "estimatedChargingTimeMinutesToMinimumSoc"),
     ),
     VolvoSensorDescription(
         key="charging_status",
@@ -246,6 +261,27 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
             _path(s, "battery", "battery", "chargerConnectionStatus"),
             CHARGER_CONNECTION_OPTIONS,
             "CHARGER_CONNECTION_STATUS_",
+        ),
+    ),
+    # Battery fields 17 and 26, as in the Polestar integration. Hidden when the car's battery reply never has them.
+    VolvoSensorDescription(
+        key="charging_type",
+        translation_key="charging_type",
+        icon="mdi:ev-station",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(CHARGING_TYPE_OPTIONS),
+        requires_data="battery.chargingType",
+        value_fn=lambda s: _enum_state(_path(s, "battery", "battery", "chargingType"), CHARGING_TYPE_OPTIONS, "CHARGING_TYPE_"),
+    ),
+    VolvoSensorDescription(
+        key="charger_power_status",
+        translation_key="charger_power_status",
+        icon="mdi:power-plug-outline",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(CHARGER_POWER_STATUS_OPTIONS),
+        requires_data="battery.chargerPowerStatus",
+        value_fn=lambda s: _enum_state(
+            _path(s, "battery", "battery", "chargerPowerStatus"), CHARGER_POWER_STATUS_OPTIONS, "CHARGER_POWER_STATUS_"
         ),
     ),
     VolvoSensorDescription(
