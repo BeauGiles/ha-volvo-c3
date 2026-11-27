@@ -186,10 +186,12 @@ Open **Settings → Devices & Services → Volvo C3 → Configure**.
 
 ## Services
 
+- `volvo_au.schedule_ota`: schedule the waiting software update to install after a delay in minutes.
+- `volvo_au.cancel_ota`: cancel a scheduled software update.
 - `volvo_au.get_trips`: list trips for a period, optionally with coordinates.
 - `volvo_au.get_trips_summary`: totals for a period.
 
-Both target one of the integration's sensors and need the driving journal turned on. Fields are in **Developer tools → Actions**.
+The two update services target the **Software update** entity. The two trip services target one of the integration's sensors and need the driving journal turned on. Fields are in **Developer tools → Actions**.
 
 ## Notifications and Live Activities
 
@@ -197,8 +199,31 @@ Example automations for a charging and a climate (preconditioning) Live Activity
 
 ## FAQ
 
-**An entity is missing.**
-The integration hides entities for features the car says it doesn't have. Check [Supported cars](#supported-cars).
+**Which cars have been tested?**
+
+| Car | Market | Reported by | Notes |
+| --- | --- | --- | --- |
+| XC40 Recharge (2023, electric) | Australia | maintainer | Everything in the tables above except where marked ➖ or ◐ |
+
+Other Volvo cars on the C3 platform should work. [Open an issue](https://github.com/BeauGiles/ha-volvo-c3/issues/new/choose) with **Car report** to add yours.
+
+**An entity is missing, or says "Disabled by integration".**
+The integration hides entities for features the car says it doesn't have, or that it never sends data for. For example, an XC40 sends no cold battery status and no tyre pressures, so those are disabled. They are disabled, not deleted, and come back by themselves if the car starts sending the data. See [Supported cars](#supported-cars).
+
+**Does this wake the car or drain the 12V battery?**
+No. Polling reads what Volvo's cloud already has; the car sends updates when it chooses. Only commands (lock, climate, charging and so on) reach the car itself.
+
+**How can I tell AC from DC charging?**
+The **Charging type** sensor reads None, AC, DC or Wireless. **Charger power status** says whether the charger is supplying power.
+
+**Can I use this alongside the official Volvo integration?**
+Yes. They use different domains (`volvo` and `volvo_au`), so both can be set up at once. The official one only works where Volvo's public API is offered (see the warning at the top), and should be your first choice there.
+
+**Why is the domain `volvo_au`?**
+The integration started as an Australian-market project. Nothing in it is specific to Australia any more, but the domain stays, because changing it would change every entity ID.
+
+**What does the diagnostics download leave out?**
+The VIN (replaced everywhere it appears), registration plate, location, sign-in tokens and keys, battery pack serial number and Plug & Charge ID.
 
 **A command failed.**
 Volvo refuses a command in some situations, for example when the car is offline, being driven, or already busy. The error in Home Assistant says which, where Volvo tells us. Try again in a few minutes.
