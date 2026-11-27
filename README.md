@@ -115,7 +115,7 @@ Every command shows an error in Home Assistant when Volvo refuses it or does not
 | Button | Flash lights, Horn, Lights and horn, Lock with reduced alarm, Open and Close windows, Open and Close boot, Engine remote start, Refresh |
 | Time | Charging schedule start and end |
 
-Entity IDs come from the car model and registration, for example `sensor.xc40_abc123_state_of_charge`. Which entities appear depends on what the car supports. The **Online** sensor says whether the car can receive commands now, and **Connection** reads "Online", "In use" while the car is being driven (as the Volvo app shows), or a short "Offline: reason", with the full explanation and the time the car went offline as attributes.
+Entity IDs come from the device name when the car is first added: the model and the last 6 characters of the VIN, for example `sensor.xc40_123456_state_of_charge`. They never depend on the registration plate, which is shown on the Vehicle info sensor. Which entities appear depends on what the car supports. The **Online** sensor says whether the car can receive commands now, and **Connection** reads "Online", "In use" while the car is being driven (as the Volvo app shows), or a short "Offline: reason", with the full explanation and the time the car went offline as attributes.
 
 ## Install
 
@@ -153,7 +153,7 @@ Uses Volvo ID OAuth with PKCE + DPoP, same as the iOS app. You'll need:
 
 ### Capturing the `volvooncall://` callback URL
 
-During config-flow, you'll be sent to Volvo ID in a browser to sign in (+ 2FA). After login, Volvo tries to redirect to a `volvooncall://oauth/code?code=...&state=...` URL that the iOS app would normally handle. On a desktop browser there's no app to catch it, so you need to grab the URL manually and paste it back into Home Assistant.
+During config-flow, you'll be sent to Volvo ID in a browser to sign in (+ 2FA). After login, Volvo tries to redirect to a `volvooncall://auth/callback?code=...&state=...` URL that the iOS app would normally handle. On a desktop browser there's no app to catch it, so you need to grab the URL manually and paste it back into Home Assistant.
 
 > [!TIP]
 > **Use Chrome or Edge with DevTools.** Safari silently swallows custom-scheme redirects and won't show the URL anywhere.
@@ -162,13 +162,13 @@ During config-flow, you'll be sent to Volvo ID in a browser to sign in (+ 2FA). 
 2. Open **DevTools** (F12 or ⌥⌘I on Mac) → **Network** tab.
 3. Tick **"Preserve log"** so the redirect entry doesn't get wiped.
 4. Paste the Volvo ID login URL from Home Assistant into the address bar and sign in (complete 2FA).
-5. After login, the page will go blank or show an error — that's expected. In the Network tab, scroll to the **last entry**: it'll be a request to `volvooncall://oauth/code?...` (usually shown in red as `(failed)`).
+5. After login, the page will go blank or show an error — that's expected. In the Network tab, scroll to the **last entry**: it'll be a request to `volvooncall://auth/callback?code=...` (usually shown in red as `(failed)`).
 6. Right-click it → **Copy → Copy URL** (or **Copy link address**).
 7. Paste that full URL back into the Home Assistant config-flow field.
 
 <img src="docs/images/devtools-callback.png" alt="DevTools showing the volvooncall:// callback URL in the Network tab" width="75%">
 
-*The bits you care about: **Network** tab open, **Preserve log** ticked, then the failed `callback?code=...` entry at the bottom — Request URL on the right is what you copy.*
+*The bits you care about: **Network** tab open, **Preserve log** ticked, then the failed `volvooncall://auth/callback?code=...` entry at the bottom — Request URL on the right is what you copy.*
 
 > [!IMPORTANT]
 > The `state` parameter in the URL must match the one Home Assistant generated for the current flow attempt. If you cancel and restart the flow, request a fresh login URL. Don't reuse an old one.
@@ -186,10 +186,12 @@ Open **Settings → Devices & Services → Volvo C3 → Configure**.
 
 ## Services
 
+- `volvo_au.schedule_ota`: schedule the waiting software update to install after a delay in minutes.
+- `volvo_au.cancel_ota`: cancel a scheduled software update.
 - `volvo_au.get_trips`: list trips for a period, optionally with coordinates.
 - `volvo_au.get_trips_summary`: totals for a period.
 
-Both target one of the integration's sensors and need the driving journal turned on. Fields are in **Developer tools → Actions**.
+The two update services target the **Software update** entity. The two trip services target one of the integration's sensors and need the driving journal turned on. Fields are in **Developer tools → Actions**.
 
 ## Notifications and Live Activities
 
@@ -197,8 +199,31 @@ Example automations for a charging and a climate (preconditioning) Live Activity
 
 ## FAQ
 
-**An entity is missing.**
-The integration hides entities for features the car says it doesn't have. Check [Supported cars](#supported-cars).
+**Which cars have been tested?**
+
+| Car | Market | Reported by | Notes |
+| --- | --- | --- | --- |
+| XC40 Recharge (2023, electric) | Australia | maintainer | Everything in the tables above except where marked ➖ or ◐ |
+
+Other Volvo cars on the C3 platform should work. [Open an issue](https://github.com/BeauGiles/ha-volvo-c3/issues/new/choose) with **Car report** to add yours.
+
+**An entity is missing, or says "Disabled by integration".**
+The integration hides entities for features the car says it doesn't have, or that it never sends data for. For example, an XC40 sends no cold battery status and no tyre pressures, so those are disabled. They are disabled, not deleted, and come back by themselves if the car starts sending the data. See [Supported cars](#supported-cars).
+
+**Does this wake the car or drain the 12V battery?**
+No. Polling reads what Volvo's cloud already has; the car sends updates when it chooses. Only commands (lock, climate, charging and so on) reach the car itself.
+
+**How can I tell AC from DC charging?**
+The **Charging type** sensor reads None, AC, DC or Wireless. **Charger power status** says whether the charger is supplying power.
+
+**Can I use this alongside the official Volvo integration?**
+Yes. They use different domains (`volvo` and `volvo_au`), so both can be set up at once. The official one only works where Volvo's public API is offered (see the warning at the top), and should be your first choice there.
+
+**Why is the domain `volvo_au`?**
+The integration started as an Australian-market project. Nothing in it is specific to Australia any more, but the domain stays, because changing it would change every entity ID.
+
+**What does the diagnostics download leave out?**
+The VIN (replaced everywhere it appears), registration plate, location, sign-in tokens and keys, battery pack serial number and Plug & Charge ID.
 
 **A command failed.**
 Volvo refuses a command in some situations, for example when the car is offline, being driven, or already busy. The error in Home Assistant says which, where Volvo tells us. Try again in a few minutes.
@@ -215,6 +240,10 @@ Download diagnostics from **Settings → Devices & Services → Volvo C3 → ⋮
 ## For developers
 
 The code that speaks to Volvo's servers is in `custom_components/volvo_au/volvo_api.py`. It talks to the same backend the Volvo Cars iOS app uses. Run `uv run --with pytest --with voluptuous pytest -q` for the tests. A design for sharing the backend code with Polestar C3 is in [docs/design-shared-c3-library.md](docs/design-shared-c3-library.md).
+
+## Credits
+
+This started as a fork of [seiken27/ha-volvo-au](https://github.com/seiken27/ha-volvo-au) (MIT), which worked out the Volvo ID sign-in and the C3 services for Australian Volvo EVs, and has since been reworked. Thanks to its author. See the [changelog](CHANGELOG.md) for what changed.
 
 ## ☕ Support
 
