@@ -8,7 +8,7 @@ Dates are 2026.
 
 ### Added
 
-- **Battery thermal event** binary sensor (safety): a high-voltage battery thermal event reported by the car (`batteryThermalEventTriggered`, health field 48, as named in the Volvo app, which has a help screen for it). The car leaves the field out when there is no event, so it reads off. Matches Polestar C3. Not yet seen from a real car.
+- **Battery thermal event** binary sensor (safety): a high-voltage battery thermal event reported by the car (`batteryThermalEventTriggered`, health field 48, as named in the Volvo app, which has a help screen for it). The car leaves the field out when there is no event, so it reads off. Listed under Diagnostic. Matches Polestar C3.
 
 ### Fixed
 

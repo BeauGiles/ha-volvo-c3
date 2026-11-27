@@ -323,6 +323,7 @@ DESCRIPTIONS: tuple[VolvoBinaryDescription, ...] = (
         icon_on="mdi:fire-alert",
         icon_off="mdi:car-battery",
         device_class=BinarySensorDeviceClass.SAFETY,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=_battery_thermal_event,
     ),
     VolvoBinaryDescription(
