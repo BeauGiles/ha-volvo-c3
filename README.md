@@ -34,7 +34,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | State of charge, range | ✅ | ✅ |
 | Charging status, power, current, voltage, charger connection | ✅ | ✅ |
 | Time to full charge | ✅ | ✅ |
-| Time to target charge and to minimum SoC | ➖ | ✅ |
+| Time to target charge and to minimum SoC | 🧪 | ✅ |
 | Charge port, plugged in | ✅ | ✅ |
 | Saved charge locations, "at charge location" | ➖ | ✅ |
 | Location, with address | ✅ | ✅ |
@@ -53,7 +53,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | Battery thermal event (high-voltage battery safety) | 🧪 | 🧪 |
 | Cold battery status | ➖ | 🧪 |
 | Engine coolant, oil level (combustion cars) | ◐ | ➖ |
-| Climate status and time remaining | ➖ | ✅ |
+| Climate status and time remaining | 🧪 | ✅ |
 | Cabin air quality | ✅ | ✅ |
 | Software version | ✅ | ✅ |
 | Driving journal: last trip, trips and distance this month (opt in) | ✅ | ➖ |
@@ -101,7 +101,7 @@ Every command shows an error in Home Assistant when Volvo refuses it or does not
 
 | Platform | Examples |
 | --- | --- |
-| Sensor | State of charge, range, charging status, charger connection, charging power, odometer, trip meters, service sensors, tyre pressures, software version, Connection, Vehicle info, VIN |
+| Sensor | State of charge, range, charging status, charger connection, charging power, time to target charge and to minimum SoC, climate running status, request type and time remaining, odometer, trip meters, service sensors, tyre pressures, software version, Connection, Vehicle info, VIN |
 | Binary sensor | Online, In use, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, bonnet, boot, sunroof, charge port |
 | Device tracker | Location |
 | Lock | Lock, Boot lock |
