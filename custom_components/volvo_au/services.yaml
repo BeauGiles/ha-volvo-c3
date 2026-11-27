@@ -39,3 +39,24 @@ get_trips_summary:
       required: false
       selector:
         datetime:
+schedule_ota:
+  target:
+    entity:
+      integration: volvo_au
+      domain: update
+  fields:
+    delay_minutes:
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 1440
+          step: 1
+          unit_of_measurement: min
+          mode: box
+cancel_ota:
+  target:
+    entity:
+      integration: volvo_au
+      domain: update

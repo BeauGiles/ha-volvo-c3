@@ -30,7 +30,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
-from . import climate, journal
+from . import climate, journal, ota
 from .polltiers import SlowTiers
 from .const import (
     API_BASE,
@@ -283,6 +283,13 @@ def _parse_software_info_frame(frame: bytes) -> dict[str, Any] | None:
                     for tfld, twt, tval in _walk(uval):
                         if tfld == 1 and twt == 0:
                             info["timestamp"] = tval
+                elif ufld == 8 and uwt == 2:
+                    # ScheduleInfo: f2 = scheduledAt (Timestamp {f1 = seconds})
+                    for sfld, swt, sval in _walk(uval):
+                        if sfld == 2 and swt == 2:
+                            for tfld, twt, tval in _walk(sval):
+                                if tfld == 1 and twt == 0 and tval:
+                                    info["scheduled_at"] = tval
     return info or None
 
 
@@ -652,6 +659,21 @@ class VolvoClient:
         out.extend(payload)
         return bytes(out)
 
+    @staticmethod
+    def _pb_varint(field: int, value: int) -> bytes:
+        """A varint field: tag (field << 3 | 0) then the value."""
+        out = bytearray()
+        for v in (field << 3, value):
+            while True:
+                b = v & 0x7F
+                v >>= 7
+                if v:
+                    out.append(b | 0x80)
+                else:
+                    out.append(b)
+                    break
+        return bytes(out)
+
     @classmethod
     def _grpc_frame(cls, payload: bytes) -> bytes:
         return b"\x00" + struct.pack(">I", len(payload)) + payload
@@ -990,6 +1012,74 @@ class VolvoClient:
             "GetSoftwareInfo frame len=%d, parsed=%s", len(frame), parsed
         )
         return parsed
+
+    # ----- OTA install scheduling (ota_mobcache.SchedulerService; same messages as the Polestar app) -----
+
+    _OTA_SCHEDULER = "/ota_mobcache.SchedulerService/"
+
+    async def _grpc_first_frame(self, path: str, payload: bytes, *, timeout: float = 20.0) -> bytes | None:
+        """POST a gRPC request and return the first reply message (enough for a server stream that stays open)."""
+        body = self._grpc_frame(payload)
+        headers = await self._auth_headers()
+        headers.update({"content-type": "application/grpc", "te": "trailers", "vin": self.vin})
+        loop = asyncio.get_running_loop()
+
+        def _do() -> bytes | None:
+            with httpx.Client(http2=True, timeout=timeout) as cli:
+                with cli.stream("POST", API_BASE + path, headers=headers, content=body) as r:
+                    grpc_status = r.headers.get("grpc-status")
+                    if r.status_code != 200 or (grpc_status not in (None, "0")):
+                        raise VolvoApiError(
+                            f"{path} failed: HTTP {r.status_code}, grpc-status {grpc_status} "
+                            f"{r.headers.get('grpc-message') or ''}".strip()
+                        )
+                    buf = bytearray()
+                    for chunk in r.iter_bytes():
+                        buf.extend(chunk)
+                        if len(buf) >= 5:
+                            length = struct.unpack(">I", bytes(buf[1:5]))[0]
+                            if len(buf) >= 5 + length:
+                                return bytes(buf[5 : 5 + length])
+                    return None
+
+        return await loop.run_in_executor(None, _do)
+
+    async def get_ota_schedule(self) -> dict[str, Any] | None:
+        """The install schedule the app shows: {status, scheduled_time, software_id, set_by}, or None."""
+        try:
+            frame = await self._grpc_first_frame(
+                self._OTA_SCHEDULER + "GetSchedule", self._pb_len_delim(1, self.vin.encode("ascii"))
+            )
+        except (VolvoApiError, httpx.HTTPError) as exc:
+            _LOGGER.debug("OTA schedule read failed: %s", exc)
+            return None
+        return ota.parse_scheduler_reply(frame) if frame else None
+
+    async def _ota_command(self, method: str, payload: bytes) -> dict[str, Any] | None:
+        try:
+            frame = await self._grpc_first_frame(self._OTA_SCHEDULER + method, payload, timeout=30.0)
+        finally:
+            self._tiers.invalidate("software_info", "ota_schedule")
+        return ota.parse_scheduler_reply(frame) if frame else None
+
+    async def ota_schedule(self, software_id: str, relative_seconds: int = 0) -> dict[str, Any] | None:
+        """Schedule the install ``relative_seconds`` from now (ScheduleRequest: vin 1, relativeTime 2, softwareId 3)."""
+        payload = (
+            self._pb_len_delim(1, self.vin.encode("ascii"))
+            + self._pb_varint(2, max(0, int(relative_seconds)))
+            + self._pb_len_delim(3, software_id.encode())
+        )
+        return await self._ota_command("Schedule", payload)
+
+    async def ota_install_now(self, software_id: str) -> dict[str, Any] | None:
+        """Start the install now (InstallNowRequest: vin 1, softwareId 2)."""
+        payload = self._pb_len_delim(1, self.vin.encode("ascii")) + self._pb_len_delim(2, software_id.encode())
+        return await self._ota_command("InstallNow", payload)
+
+    async def ota_cancel_schedule(self, software_id: str) -> dict[str, Any] | None:
+        """Cancel a scheduled install (CancelScheduleRequest: vin 1, softwareId 2)."""
+        payload = self._pb_len_delim(1, self.vin.encode("ascii")) + self._pb_len_delim(2, software_id.encode())
+        return await self._ota_command("CancelSchedule", payload)
 
     async def get_weather_report(self) -> dict[str, Any] | None:
         """Read Volvo's weather report for the car's location.
@@ -1338,6 +1428,7 @@ class VolvoClient:
             "amp_limit": self.get_amp_limit,
             "global_charge_timer": self.get_global_charge_timer,
             "software_info": self.get_software_info,
+            "ota_schedule": self.get_ota_schedule,
             "weather": self.get_weather_report,
             "last_trip": self.get_last_trip,
             "trips_month": self.get_trips_month,

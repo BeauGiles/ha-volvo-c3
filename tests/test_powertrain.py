@@ -91,6 +91,7 @@ def test_engine_remote_start_flag_and_structure_week_edge_cases():
 # reportsLightWarnings is shortened: only whether it has entries matters.
 XC40_FLAGS = {
     "supportsDrivingJournal": True,
+    "supportsRemoteOtaInstallSchedule": True,
     "reportsAvgElectricConsumption": True,
     "reportsAvgSpeed": True,
     "reportsElectricRange": True,
