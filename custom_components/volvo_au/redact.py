@@ -11,7 +11,7 @@ from typing import Any
 _REDACT_KEYS = {
     "vin", "id", "refresh_token", "dpop_private_key_pem", "id_token", "app_installation_id",
     "registrationplate", "registration_plate", "latitude", "longitude", "altitude", "heading",
-    "streetaddress", "streetname", "streetnumber", "postalcode", "city", "name", "usernotes", "notes",
+    "batterypackserialnumber", "plugandchargepcid", "streetaddress", "streetname", "streetnumber", "postalcode", "city", "name", "usernotes", "notes",
 }
 REDACTED = "**REDACTED**"
 

@@ -115,6 +115,14 @@ def charge_minutes(snap: dict[str, Any], field: str) -> int | None:
     return 0 if value is None else value
 
 
+def charger_power_status_raw(snap: dict[str, Any]) -> Any:
+    """Volvo's charger power status, with its ``NO_POWER_AVAILABLE`` read as Polestar's ``no_power``."""
+    raw = _path(snap, "battery", "battery", "chargerPowerStatus")
+    if isinstance(raw, str) and raw.endswith("NO_POWER_AVAILABLE"):
+        return raw[: -len("_AVAILABLE")]
+    return raw
+
+
 def _climate(snap: dict[str, Any]) -> dict[str, Any] | None:
     """The car's parkingClimatization record, or None when Volvo has not sent one."""
     pc = _path(snap, "parking_climatization", "parkingClimatization")
@@ -281,7 +289,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         options=list(CHARGER_POWER_STATUS_OPTIONS),
         requires_data="battery.chargerPowerStatus",
         value_fn=lambda s: _enum_state(
-            _path(s, "battery", "battery", "chargerPowerStatus"), CHARGER_POWER_STATUS_OPTIONS, "CHARGER_POWER_STATUS_"
+            charger_power_status_raw(s), CHARGER_POWER_STATUS_OPTIONS, "CHARGER_POWER_STATUS_"
         ),
     ),
     VolvoSensorDescription(

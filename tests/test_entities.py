@@ -417,6 +417,11 @@ def test_charge_time_and_climate_sensors_match_polestar(monkeypatch):
     assert by_key["charging_type"].value_fn(plugged) == "ac"
     assert by_key["charger_power_status"].value_fn(plugged) == "providing_power"
     assert by_key["charging_type"].requires_data == "battery.chargingType"
+    # As a real XC40 sends them when unplugged (diagnostics, 27 November).
+    unplugged_xc40 = {"battery": {"battery": {"chargingType": "CHARGING_TYPE_NONE",
+                                              "chargerPowerStatus": "CHARGER_POWER_STATUS_NO_POWER_AVAILABLE"}}}
+    assert by_key["charging_type"].value_fn(unplugged_xc40) == "none"
+    assert by_key["charger_power_status"].value_fn(unplugged_xc40) == "no_power"
 
     def climate(**pc):
         return {"parking_climatization": {"parkingClimatization": pc}}
