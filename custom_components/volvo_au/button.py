@@ -52,8 +52,8 @@ class VolvoRefreshButton(VolvoEntity, ButtonEntity):
 # The unique id suffixes are the ones the entities had before 16 Nov 2026: do not change them.
 COMMAND_BUTTONS: list[tuple[str, str, str, str, str, dict[str, Any]]] = [
     ("flash", "Flash lights", "mdi:car-light-high", "Flash", "flash", {}),
-    ("honk", "Honk", "mdi:bugle", "Honk", "honk", {}),
-    ("honk_flash", "Honk and flash", "mdi:bugle", "Honk and flash", "honk_and_flash", {}),
+    ("honk", "Horn", "mdi:bugle", "Horn", "honk", {}),
+    ("honk_flash", "Lights and horn", "mdi:bugle", "Lights and horn", "honk_and_flash", {}),
     ("window_open", "Open windows", "mdi:window-open", "Open windows", "window_control", {"open": True}),
     ("window_close", "Close windows", "mdi:window-closed", "Close windows", "window_control", {"open": False}),
     ("engine_remote_start", "Engine remote start", "mdi:engine", "Engine remote start", "engine_remote_start", {}),
