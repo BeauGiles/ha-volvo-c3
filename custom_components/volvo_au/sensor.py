@@ -63,6 +63,11 @@ CHARGING_STATUS_OPTIONS = (
 )
 CHARGER_CONNECTION_OPTIONS = ("connected", "disconnected", "fault")
 CHARGING_TYPE_OPTIONS = ("none", "ac", "dc", "wireless")
+COLD_BATTERY_STATUS_OPTIONS = ("normal", "cold_predicted", "cold_and_low_soc_predicted", "cold", "cold_and_low_soc")
+UNAVAILABLE_REASON_OPTIONS = (
+    "none", "no_internet", "power_saving_mode", "car_in_use", "ota_installation_in_progress",
+    "stolen_vehicle_tracking_in_progress", "service_mode_active",
+)
 CHARGER_POWER_STATUS_OPTIONS = ("no_power", "initializing", "available_but_inactive", "providing_power", "fault")
 USAGE_MODE_OPTIONS = ("abandoned", "inactive", "convenience", "active", "driving", "engine_on", "engine_off")
 # Climate states use the Polestar integration's keys, so automations read the same on both: "undefined" is
@@ -121,6 +126,16 @@ def charger_power_status_raw(snap: dict[str, Any]) -> Any:
     if isinstance(raw, str) and raw.endswith("NO_POWER_AVAILABLE"):
         return raw[: -len("_AVAILABLE")]
     return raw
+
+
+def unavailable_reason(snap: dict[str, Any]) -> str | None:
+    """Why the car cannot be reached, or ``none`` while it is available (as on Polestar C3)."""
+    avail = _path(snap, "availability", "availability")
+    if not isinstance(avail, dict) or not avail:
+        return None
+    if avail.get("availabilityStatus") == "AVAILABILITY_STATUS_AVAILABLE":
+        return "none"
+    return _enum_state(avail.get("unavailableReason"), UNAVAILABLE_REASON_OPTIONS, "UNAVAILABLE_REASON_")
 
 
 def _climate(snap: dict[str, Any]) -> dict[str, Any] | None:
@@ -273,6 +288,17 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
     ),
     # Battery fields 17 and 26, as in the Polestar integration. Hidden when the car's battery reply never has them.
     VolvoSensorDescription(
+        key="cold_battery_status",
+        translation_key="cold_battery_status",
+        icon="mdi:snowflake-thermometer",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(COLD_BATTERY_STATUS_OPTIONS),
+        requires_data="battery.coldBatteryStatus",
+        value_fn=lambda s: _enum_state(
+            _path(s, "battery", "battery", "coldBatteryStatus"), COLD_BATTERY_STATUS_OPTIONS, "COLD_BATTERY_STATUS_"
+        ),
+    ),
+    VolvoSensorDescription(
         key="charging_type",
         translation_key="charging_type",
         icon="mdi:ev-station",
@@ -367,7 +393,27 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda s: _path(s, "odometer", "odometer", "averageSpeedKmPerHour"),
     ),
+    VolvoSensorDescription(
+        key="avg_speed_auto",
+        requires_capability="reportsAvgSpeed",
+        requires_data="odometer.averageSpeedKmPerHourAutomatic",
+        translation_key="avg_speed_auto",
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
+        suggested_display_precision=0,
+        device_class=SensorDeviceClass.SPEED,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda s: _path(s, "odometer", "odometer", "averageSpeedKmPerHourAutomatic"),
+    ),
     # Usage / availability
+    VolvoSensorDescription(
+        key="unavailable_reason",
+        translation_key="unavailable_reason",
+        icon="mdi:cloud-alert",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=SensorDeviceClass.ENUM,
+        options=list(UNAVAILABLE_REASON_OPTIONS),
+        value_fn=unavailable_reason,
+    ),
     VolvoSensorDescription(
         key="usage_mode",
         translation_key="usage_mode",

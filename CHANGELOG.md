@@ -9,6 +9,7 @@ Dates are 2026.
 ### Added
 
 - **Charging type** (none, AC, DC, wireless) and **Charger power status** sensors, matching Polestar C3 (battery fields 17 and 26). Read as `chargingType` and `chargerPowerStatus`, which an XC40 sends (Volvo's `NO_POWER_AVAILABLE` shows as No power); a car whose battery reply never has them gets them hidden on the first poll, like other features it lacks.
+- **Cold battery status**, **Average speed (auto)**, **Unavailable reason**, **Any door open** and **Climate active**, matching Polestar C3. Cold battery status is hidden on a car whose first battery reply says `UNSPECIFIED` (an XC40 does, like the Polestar 2), and Average speed (auto) on one that never sends it. Climate active follows parking climatization, so it is hidden with the other climate sensors on a car without it.
 - Diagnostics downloads now also redact the battery pack serial number and Plug & Charge ID.
 
 ### Fixed

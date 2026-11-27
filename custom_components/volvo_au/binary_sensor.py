@@ -39,6 +39,25 @@ def _open(snap: dict[str, Any], key: str) -> bool | None:
         return False
 
 
+_DOORS = ("frontLeftDoor", "frontRightDoor", "rearLeftDoor", "rearRightDoor")
+
+
+def any_door_open(snap: dict[str, Any]) -> bool | None:
+    """True when any of the four doors is open (the boot and bonnet are not doors), as on Polestar C3."""
+    states = [_open(snap, door) for door in _DOORS]
+    if all(v is None for v in states):
+        return None
+    return any(states)
+
+
+def climate_active(snap: dict[str, Any]) -> bool | None:
+    """True while parking climatization runs (Volvo's RUNNING_STATUS_ON)."""
+    pc = (snap.get("parking_climatization") or {}).get("parkingClimatization")
+    if not isinstance(pc, dict) or not pc:
+        return None
+    return pc.get("runningStatus") == "RUNNING_STATUS_ON"
+
+
 def has_sunroof(snap: dict[str, Any] | None) -> bool | None:
     """Does the car report a sunroof? None when there is no exterior data yet.
 
@@ -165,11 +184,20 @@ class VolvoBinaryDescription(BinarySensorEntityDescription):
     attrs_fn: Callable[[dict[str, Any]], dict[str, Any]] | None = None
     requires_capability: str | None = None
     requires_charge_port_status: bool = False
+    requires_data: str | None = None
     icon_on: str | None = None
     icon_off: str | None = None
 
 
 DESCRIPTIONS: tuple[VolvoBinaryDescription, ...] = (
+    VolvoBinaryDescription(
+        key="any_door_open",
+        translation_key="any_door_open",
+        icon_on="mdi:car-door-lock-open",
+        icon_off="mdi:car-door",
+        device_class=BinarySensorDeviceClass.DOOR,
+        value_fn=any_door_open,
+    ),
     VolvoBinaryDescription(
         key="door_fl",
         translation_key="door_fl",
@@ -344,6 +372,13 @@ DESCRIPTIONS: tuple[VolvoBinaryDescription, ...] = (
         attrs_fn=_light_attributes,
     ),
     VolvoBinaryDescription(
+        key="climate_active",
+        translation_key="climate_active",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        requires_data="parking_climatization",
+        value_fn=climate_active,
+    ),
+    VolvoBinaryDescription(
         key="in_use",
         translation_key="in_use",
         device_class=BinarySensorDeviceClass.MOVING,
@@ -389,6 +424,7 @@ class VolvoBinarySensor(VolvoEntity, BinarySensorEntity):
         self.entity_description = description
         self.requires_capability = description.requires_capability
         self.requires_charge_port_status = description.requires_charge_port_status
+        self.requires_data = description.requires_data
         self._attr_unique_id = f"{DOMAIN}_{coordinator.client.vin}_{description.key}"
 
     @property

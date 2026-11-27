@@ -80,11 +80,20 @@
       "alarm_triggered": {
         "name": "Alarm triggered"
       },
+      "any_door_open": {
+        "name": "Any door open"
+      },
+      "battery_thermal_event": {
+        "name": "Battery thermal event"
+      },
       "brake_fluid_warning": {
         "name": "Brake fluid"
       },
       "charge_port": {
         "name": "Charge port"
+      },
+      "climate_active": {
+        "name": "Climate active"
       },
       "door_fl": {
         "name": "Front left door"
@@ -113,9 +122,6 @@
       "low_voltage_battery_warning": {
         "name": "12V battery"
       },
-      "battery_thermal_event": {
-        "name": "Battery thermal event"
-      },
       "oil_level_warning": {
         "name": "Oil level low"
       },
@@ -134,6 +140,9 @@
       "tailgate": {
         "name": "Boot"
       },
+      "tyre_warning": {
+        "name": "Tyre warning"
+      },
       "washer_fluid_warning": {
         "name": "Washer fluid"
       },
@@ -148,9 +157,6 @@
       },
       "window_rr": {
         "name": "Rear right window"
-      },
-      "tyre_warning": {
-        "name": "Tyre warning"
       }
     },
     "button": {
@@ -269,6 +275,9 @@
       "avg_speed": {
         "name": "Average speed"
       },
+      "avg_speed_auto": {
+        "name": "Average speed (auto)"
+      },
       "battery_capacity": {
         "name": "Battery capacity"
       },
@@ -345,6 +354,16 @@
       "climate_time_remaining": {
         "name": "Climate time remaining"
       },
+      "cold_battery_status": {
+        "name": "Cold battery",
+        "state": {
+          "normal": "Normal",
+          "cold_predicted": "Cold predicted",
+          "cold_and_low_soc_predicted": "Cold and low charge predicted",
+          "cold": "Cold",
+          "cold_and_low_soc": "Cold and low charge"
+        }
+      },
       "connection": {
         "name": "Connection"
       },
@@ -407,6 +426,18 @@
       },
       "tyre_rear_right_pressure": {
         "name": "Rear right tyre pressure"
+      },
+      "unavailable_reason": {
+        "name": "Unavailable reason",
+        "state": {
+          "none": "Not applicable",
+          "no_internet": "No internet",
+          "power_saving_mode": "Power saving mode",
+          "car_in_use": "Car in use",
+          "ota_installation_in_progress": "OTA installation in progress",
+          "stolen_vehicle_tracking_in_progress": "Stolen vehicle tracking in progress",
+          "service_mode_active": "Service mode active"
+        }
       },
       "usage_mode": {
         "name": "Usage mode",
