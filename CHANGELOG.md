@@ -4,7 +4,7 @@ All notable changes to Volvo C3 (domain `volvo_au`). This integration and [Poles
 
 Dates are 2026.
 
-## Unreleased
+## 0.4.1 (27 November)
 
 ### Added
 
