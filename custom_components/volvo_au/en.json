@@ -242,6 +242,27 @@
       "charging_voltage": {
         "name": "Charging voltage"
       },
+      "climate_request_type": {
+        "name": "Climate request type",
+        "state": {
+          "undefined": "Not running",
+          "now_from_hmi": "Now from car",
+          "now_from_remote": "Now from remote",
+          "timer": "Timer",
+          "keep_climate": "Keep climate"
+        }
+      },
+      "climate_running_status": {
+        "name": "Climate running status",
+        "state": {
+          "undefined": "Not running",
+          "start_attempt": "Start attempt",
+          "active": "Active"
+        }
+      },
+      "climate_time_remaining": {
+        "name": "Climate time remaining"
+      },
       "connection": {
         "name": "Connection"
       },
@@ -271,6 +292,12 @@
       },
       "time_to_full": {
         "name": "Time to full charge"
+      },
+      "time_to_min_soc": {
+        "name": "Time to minimum SoC"
+      },
+      "time_to_target": {
+        "name": "Time to target charge"
       },
       "trip_auto_km": {
         "name": "Trip meter (auto)"

@@ -63,6 +63,17 @@ CHARGING_STATUS_OPTIONS = (
 )
 CHARGER_CONNECTION_OPTIONS = ("connected", "disconnected", "fault")
 USAGE_MODE_OPTIONS = ("abandoned", "inactive", "convenience", "active", "driving", "engine_on", "engine_off")
+# Climate states use the Polestar integration's keys, so automations read the same on both: "undefined" is
+# "Not running" (climate off), as it is there.
+CLIMATE_RUNNING_STATUS_OPTIONS = ("undefined", "start_attempt", "active")
+CLIMATE_REQUEST_TYPE_OPTIONS = ("undefined", "now_from_hmi", "now_from_remote", "timer", "keep_climate")
+_CLIMATE_RUNNING = {"RUNNING_STATUS_ON": "active", "RUNNING_STATUS_PENDING": "start_attempt"}
+_CLIMATE_REQUEST = {
+    "START_REASON_MANUALLY_FROM_CAR": "now_from_hmi",
+    "START_REASON_REMOTE": "now_from_remote",
+    "START_REASON_TIMER": "timer",
+    "START_REASON_KEEP_CLIMATE": "keep_climate",
+}
 _reported_unknown: set[str] = set()
 
 
@@ -87,6 +98,41 @@ def _enum_state(raw: Any, options: tuple[str, ...], *prefixes: str) -> str | Non
         _reported_unknown.add(raw)
         _LOGGER.warning("Volvo reported the state %s, which this integration does not know; showing no state", raw)
     return None
+
+
+def _climate(snap: dict[str, Any]) -> dict[str, Any] | None:
+    """The car's parkingClimatization record, or None when Volvo has not sent one."""
+    pc = _path(snap, "parking_climatization", "parkingClimatization")
+    return pc if isinstance(pc, dict) and pc else None
+
+
+def climate_running_status(snap: dict[str, Any]) -> str | None:
+    """``active``, ``start_attempt`` (Volvo's PENDING) or ``undefined`` (not running)."""
+    pc = _climate(snap)
+    if pc is None:
+        return None
+    return _CLIMATE_RUNNING.get(str(pc.get("runningStatus") or ""), "undefined")
+
+
+def climate_request_type(snap: dict[str, Any]) -> str | None:
+    """What started the climate (car, app, timer, keep climate); ``undefined`` while it is not running."""
+    status = climate_running_status(snap)
+    if status is None:
+        return None
+    if status == "undefined":
+        return "undefined"
+    return _CLIMATE_REQUEST.get(str((_climate(snap) or {}).get("startReason") or ""), "undefined")
+
+
+def climate_minutes_left(snap: dict[str, Any]) -> int | None:
+    """Minutes of climate left while it runs, 0 when it is off."""
+    status = climate_running_status(snap)
+    if status is None:
+        return None
+    if status == "undefined":
+        return 0
+    left = (_climate(snap) or {}).get("runtimeLeftMinutes")
+    return int(left) if isinstance(left, (int, float)) or (isinstance(left, str) and left.isdigit()) else None
 
 
 def _round1(v: Any) -> float | None:
@@ -156,6 +202,25 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda s: _path(s, "battery", "battery", "estimatedChargingTimeToFullMinutes"),
+    ),
+    # Battery fields 9 and 19, as in the Volvo app (and the Polestar integration's sensors of the same name).
+    VolvoSensorDescription(
+        key="time_to_target",
+        translation_key="time_to_target",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
+        device_class=SensorDeviceClass.DURATION,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda s: _path(s, "battery", "battery", "estimatedChargingTimeMinutesToTargetDistance"),
+    ),
+    VolvoSensorDescription(
+        key="time_to_min_soc",
+        translation_key="time_to_min_soc",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
+        device_class=SensorDeviceClass.DURATION,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda s: _path(s, "battery", "battery", "estimatedChargingTimeMinutesToMinimumSoc"),
     ),
     VolvoSensorDescription(
         key="charging_status",
@@ -321,6 +386,37 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement="µg/m³",
         value_fn=lambda s: _path(s, "pre_cleaning", "preCleaning", "measuredParticulateMatter25"),
+    ),
+    # Climate (parkingClimatization), matching the Polestar integration's climate sensors.
+    VolvoSensorDescription(
+        key="climate_running_status",
+        requires_data="parking_climatization",
+        requires_capability="supportsParkingClimatization",
+        translation_key="climate_running_status",
+        icon="mdi:air-conditioner",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(CLIMATE_RUNNING_STATUS_OPTIONS),
+        value_fn=climate_running_status,
+    ),
+    VolvoSensorDescription(
+        key="climate_request_type",
+        requires_data="parking_climatization",
+        requires_capability="supportsParkingClimatization",
+        translation_key="climate_request_type",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        device_class=SensorDeviceClass.ENUM,
+        options=list(CLIMATE_REQUEST_TYPE_OPTIONS),
+        value_fn=climate_request_type,
+    ),
+    VolvoSensorDescription(
+        key="climate_time_remaining",
+        requires_data="parking_climatization",
+        requires_capability="supportsParkingClimatization",
+        translation_key="climate_time_remaining",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
+        device_class=SensorDeviceClass.DURATION,
+        value_fn=climate_minutes_left,
     ),
     VolvoSensorDescription(
         key="air_purification_last_cycle",

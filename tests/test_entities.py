@@ -386,3 +386,37 @@ def test_command_refusal_is_read_from_the_reply(monkeypatch):
     assert refusal([b"\x18\x06"]) is None  # success
     assert refusal([b"\x18\x02"]) is None  # seen on commands that worked
     assert refusal([]) is None
+
+
+def test_charge_time_and_climate_sensors_match_polestar(monkeypatch):
+    volvo = load_volvo(monkeypatch, FakeRegistry())
+    by_key = {d.key: d for d in volvo.sensor.SENSORS}
+    battery = {"battery": {"battery": {"estimatedChargingTimeMinutesToTargetDistance": 42,
+                                       "estimatedChargingTimeMinutesToMinimumSoc": 7}}}
+    assert by_key["time_to_target"].value_fn(battery) == 42
+    assert by_key["time_to_min_soc"].value_fn(battery) == 7
+    assert by_key["time_to_target"].entity_category is EntityCategory.DIAGNOSTIC
+
+    def climate(**pc):
+        return {"parking_climatization": {"parkingClimatization": pc}}
+
+    running = climate(runningStatus="RUNNING_STATUS_ON", runtimeLeftMinutes=27, startReason="START_REASON_REMOTE")
+    assert by_key["climate_running_status"].value_fn(running) == "active"
+    assert by_key["climate_request_type"].value_fn(running) == "now_from_remote"
+    assert by_key["climate_time_remaining"].value_fn(running) == 27
+
+    pending = climate(runningStatus="RUNNING_STATUS_PENDING", startReason="START_REASON_TIMER")
+    assert by_key["climate_running_status"].value_fn(pending) == "start_attempt"
+    assert by_key["climate_request_type"].value_fn(pending) == "timer"
+
+    # Off: "Not running", nothing left, and a stale start reason is not shown.
+    off = climate(runningStatus="RUNNING_STATUS_OFF", runtimeLeftMinutes=0, startReason="START_REASON_REMOTE")
+    assert by_key["climate_running_status"].value_fn(off) == "undefined"
+    assert by_key["climate_request_type"].value_fn(off) == "undefined"
+    assert by_key["climate_time_remaining"].value_fn(off) == 0
+
+    # No record at all: no state.
+    assert by_key["climate_running_status"].value_fn({}) is None
+    assert by_key["climate_time_remaining"].value_fn({}) is None
+    for key in ("climate_running_status", "climate_request_type"):
+        assert set(by_key[key].options) >= {"undefined"}

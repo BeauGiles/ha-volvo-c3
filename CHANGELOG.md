@@ -9,6 +9,8 @@ Dates are 2026.
 ### Added
 
 - **Battery thermal event** binary sensor (safety): a high-voltage battery thermal event reported by the car (`batteryThermalEventTriggered`, health field 48, as named in the Volvo app, which has a help screen for it). The car leaves the field out when there is no event, so it reads off. Listed under Diagnostic. Matches Polestar C3.
+- **Time to target charge** and **Time to minimum SoC** (diagnostic): the car's own charging time estimates (battery fields 9 and 19, as in the Volvo app). Matches Polestar C3.
+- **Climate running status** (Active, Start attempt, Not running), **Climate request type** (diagnostic: now from car, now from remote, timer, keep climate) and **Climate time remaining**, from the parking climatization record the Climate switch already reads. The state keys match Polestar C3's, so automations read the same on both. Not yet seen from a real car.
 
 ### Fixed
 
