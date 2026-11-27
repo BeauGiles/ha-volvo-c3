@@ -46,6 +46,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | Odometer, trip meters, average consumption, average speed | ✅ | ✅ (average speed hidden on the Polestar 2) |
 | Outside temperature | ✅ | ✅ |
 | Service required (with urgency), days, distance and engine hours to service | ✅ | ✅ |
+| Service plan (prepaid service contract: products, end dates, mileage limits) | ➖ | 🧪 |
 | Tyre warning, per-wheel grades | ◐ | ◐ |
 | Per-wheel tyre pressures | ◐ | ◐ |
 | 12V battery, brake fluid, washer fluid, light status | ✅ | ✅ |
