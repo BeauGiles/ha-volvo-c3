@@ -38,7 +38,8 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | Charge port (hidden on Polestar 2, XC40 and C40, where it always reads closed), plugged in | ✅ | ✅ |
 | Saved charge locations, "at charge location" | ➖ | ✅ |
 | Location, with address | ✅ | ✅ |
-| Parked location, altitude, heading, speed | ➖ | ✅ |
+| Parked location | ➖ | ✅ |
+| Altitude, heading, speed (the Polestar 2 does not send them) | ➖ | ◐ |
 | Doors, windows, bonnet, boot | ✅ | ✅ |
 | Sunroof | ◐ | ➖ |
 | Central lock, boot lock | ✅ | ✅ |
