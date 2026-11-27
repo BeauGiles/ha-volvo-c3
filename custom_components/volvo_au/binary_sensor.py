@@ -277,6 +277,7 @@ DESCRIPTIONS: tuple[VolvoBinaryDescription, ...] = (
         icon_on="mdi:alert-circle",
         icon_off="mdi:car-brake-fluid-level",
         device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda s: _warning(s, "brakeFluidLevelWarning"),
     ),
     VolvoBinaryDescription(
@@ -315,6 +316,7 @@ DESCRIPTIONS: tuple[VolvoBinaryDescription, ...] = (
         icon_on="mdi:battery-alert",
         icon_off="mdi:car-battery",
         device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda s: _warning(s, "lowVoltageBatteryWarning"),
     ),
     VolvoBinaryDescription(

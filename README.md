@@ -39,7 +39,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | Saved charge locations, "at charge location" | ➖ | ✅ |
 | Location, with address | ✅ | ✅ |
 | Parked location, altitude, heading, speed | ➖ | ✅ |
-| Doors, windows, hood, boot | ✅ | ✅ |
+| Doors, windows, bonnet, boot | ✅ | ✅ |
 | Sunroof | ◐ | ➖ |
 | Central lock, boot lock | ✅ | ✅ |
 | Alarm triggered, In use, Online, Connection | ✅ | ✅ |
@@ -102,7 +102,7 @@ Every command shows an error in Home Assistant when Volvo refuses it or does not
 | Platform | Examples |
 | --- | --- |
 | Sensor | State of charge, range, charging status, charger connection, charging power, odometer, trip meters, service sensors, tyre pressures, software version, Connection, Vehicle info, VIN |
-| Binary sensor | Online, In use, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, hood, boot, sunroof, charge port |
+| Binary sensor | Online, In use, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, bonnet, boot, sunroof, charge port |
 | Device tracker | Location |
 | Lock | Lock, Boot lock |
 | Switch | Climate, Charging, Charging schedule, Air purification |

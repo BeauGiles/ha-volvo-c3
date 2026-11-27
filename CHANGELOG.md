@@ -16,8 +16,9 @@ Dates are 2026.
 
 ### Changed
 
-- **Boot, not tailgate.** The Tailgate binary sensor is now **Boot**, and the Tailgate control and Close tailgate buttons are **Open boot** and **Close boot**, matching Boot lock and the Australian wording. Their icons were blank (`mdi:truck-tailgate` is not a Material Design icon) and are now `mdi:arrow-up-box` and `mdi:arrow-down-box`. Only names and icons change; existing entity IDs stay. Matches Polestar C3.
+- **Boot and bonnet, not tailgate and hood.** Hood is now **Bonnet** (Australian and UK wording). The Tailgate binary sensor is now **Boot**, and the Tailgate control and Close tailgate buttons are **Open boot** and **Close boot**, matching Boot lock and the Australian wording. Their icons were blank (`mdi:truck-tailgate` is not a Material Design icon) and are now `mdi:arrow-up-box` and `mdi:arrow-down-box`. Only names and icons change; existing entity IDs stay. Matches Polestar C3.
 - **Connection reads "In use" while the car is being used**, matching the Volvo app, instead of "Offline: car in use" ("In use from the app" for Volvo's remote-use reason). Volvo reports the car unavailable for remote commands while it is driven, so it never really was offline. Other reasons still read "Offline: …". The In use binary sensor is unchanged. Matches Polestar C3.
+- **12V battery** and **Brake fluid** move to the Diagnostic section, with Battery thermal event: health warnings that normally read OK. Matches Polestar C3.
 - **README:** an unofficial and unsupported warning at the top and a fuller Disclaimer, pointing to Volvo's official Home Assistant integration for the regions its API supports.
 - Documentation uses GitHub alert boxes (note, tip, important, warning) for the points that matter.
 - **FAQ: new Volvo sign-in page.** Since late November Volvo ID forwards sign-in to a new page on `auth.volvocars.com`. The integration works with it unchanged (tested 27 November with Reconfigure); the FAQ explains what to expect.
