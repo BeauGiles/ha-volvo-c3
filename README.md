@@ -64,7 +64,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | --- | :---: | :---: |
 | Lock, unlock, lock with reduced alarm | ✅ | ✅ |
 | Boot lock (unlock the tailgate only) | ✅ | ✅ |
-| Open and close tailgate | ✅ | ➖ |
+| Open and close tailgate | ✅ | 🧪 |
 | Flash lights, honk, honk and flash | ✅ | ✅ |
 | Open and close all windows | ✅ | ✅ |
 | Start and stop climate | ✅ | ✅ |
