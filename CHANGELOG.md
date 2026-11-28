@@ -10,6 +10,10 @@ Dates are 2026.
 
 - **A refused command says "in use" plainly.** While the car is being driven, a command now fails with "The car is in use, so it can't take commands", instead of calling the car offline or repeating "in use" twice. A car that really is offline gets "The car has been offline since 20:18 (…)". Matches Polestar C3.
 
+### Changed
+
+- **Live updates are no longer marked experimental** in the options dialog. They have been tested on an XC40, and every stream it offers pushes updates. The dialog also says live updates bring most changes and polling fills in the rest. Matches Polestar C3.
+
 ## 0.5.2 (28 November)
 
 ### Changed

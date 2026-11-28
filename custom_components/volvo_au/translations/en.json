@@ -61,17 +61,17 @@
           "idle_interval": "Idle poll interval (seconds)",
           "active_interval": "Active poll interval (seconds)",
           "registration_plate": "Registration plate (optional)",
-          "live_updates": "Live updates (experimental)",
+          "live_updates": "Live updates",
           "driving_journal": "Driving journal (trips)"
         },
         "data_description": {
           "registration_plate": "Shown in the device name. Volvo normally supplies this itself; only fill it in to override it. Leave blank to use the plate Volvo reports.",
           "idle_interval": "Default 300 (5 minutes). Between 60 and 86400.",
           "active_interval": "Default 60 (1 minute). Between 10 and 3600. Never slower than the idle interval.",
-          "live_updates": "Keep a connection open to Volvo so changes arrive as they happen, as the Polestar integration does. If Volvo only ever sends one reading for a service, that service falls back to polling by itself. Look for 'live updates work' in the log to confirm.",
+          "live_updates": "On by default. Keeps a connection open to Volvo so changes arrive as they happen, as Polestar C3 does. If Volvo only ever sends one reading for a service, that service falls back to polling by itself. Look for 'live updates work' in the log to confirm.",
           "driving_journal": "Read your trips from the Volvo driving journal: adds a Last trip sensor and the get_trips and get_trips_summary services. Off by default because trips include where you drove. The journal must be turned on in the Volvo app."
         },
-        "description": "How often to ask Volvo for updates. Idle is used while the car is quiet (parked, even if plugged in); Active while it is charging, in use, has something open or unlocked, or the climate is running. A command or the end of a trip always triggers fast checks for a minute or so."
+        "description": "How often to ask Volvo for updates. Live updates bring most changes as they happen; polling fills in the rest. Idle is used while the car is quiet (parked, even if plugged in); Active while it is charging, in use, has something open or unlocked, or the climate is running. A command or the end of a trip always triggers fast checks for a minute or so."
       }
     }
   },
