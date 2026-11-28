@@ -17,7 +17,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import climate
+from . import chronos, climate
 from .const import DOMAIN
 from .coordinator import VolvoCoordinator
 from .button import raise_if_command_failed
@@ -74,6 +74,11 @@ class VolvoChargeCurrentLimit(VolvoEntity, NumberEntity):
         except (TypeError, ValueError):
             return None
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        item = ((self.coordinator.data or {}).get("amp_limit") or {}).get("ampLimit")
+        return chronos.updated_at_attributes(item) or None
+
     async def async_set_native_value(self, value: float) -> None:
         ensure_car_online(self.coordinator)
         amps = int(round(value))
@@ -119,6 +124,11 @@ class VolvoTargetSoc(VolvoEntity, NumberEntity):
             return float(v) if v is not None else None
         except (TypeError, ValueError):
             return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        item = ((self.coordinator.data or {}).get("target_soc") or {}).get("targetSoc")
+        return chronos.updated_at_attributes(item) or None
 
     async def async_set_native_value(self, value: float) -> None:
         ensure_car_online(self.coordinator)

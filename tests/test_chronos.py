@@ -97,3 +97,19 @@ def test_data_sharing_as_the_xc40_sends_it():
 def test_raw_replies_are_described_by_field_number():
     assert chronos.describe(_f(1, _f(10, "536") + _f(2, 1))) == {"unknown_1": {"unknown_10": "536", "unknown_2": 1}}
     assert chronos.describe(b"\xff\xfe") == "hex:fffe"
+
+
+def test_sync_and_updated_at_attributes():
+    # As an XC40 sends them (28 Nov 2026).
+    metadata = {"id": "x", "updatedAt": "1791043227747", "source": "car",
+                "syncStatus": {"status": "SYNCED", "message": ""}, "sourceTimestamp": "0"}
+    assert chronos.sync_attributes(metadata) == {
+        "updated_at": "2026-10-03T16:00:27.747000+00:00", "changed_by": "car", "sync_status": "synced"}
+    pending = {"syncStatus": {"status": "RETRYING_CAR_OFFLINE", "message": "car offline"}}
+    assert chronos.sync_attributes(pending) == {"sync_status": "retrying_car_offline", "sync_message": "car offline"}
+    assert chronos.sync_attributes(None) == {} and chronos.sync_attributes({}) == {}
+
+    target_soc = {"batteryChargeTargetLevel": 100, "updatedAt": "1795436583461", "source": "mapp"}
+    assert chronos.updated_at_attributes(target_soc) == {
+        "updated_at": "2026-11-23T12:23:03.461000+00:00", "changed_by": "mapp"}
+    assert chronos.updated_at_attributes({"updatedAt": "0"}) == {}

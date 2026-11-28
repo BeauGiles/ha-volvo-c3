@@ -88,6 +88,46 @@ def error_attributes(frame: dict[str, Any] | None) -> dict[str, Any]:
     return {}
 
 
+# ----- whether a setting has reached the car (chronos Metadata / updatedAt, gateway JSON) -----
+
+
+def updated_at_attributes(item: dict[str, Any] | None) -> dict[str, Any]:
+    """{"updated_at": ISO time, "changed_by": "mapp"} from a chronos setting (int64 ms as a string, as the gateway sends).
+
+    ``changed_by`` is the backend's source: ``mapp`` (the app) or ``car`` on an XC40 (28 Nov 2026).
+    """
+    if not isinstance(item, dict):
+        return {}
+    attrs: dict[str, Any] = {}
+    try:
+        millis = int(item.get("updatedAt") or 0)
+    except (TypeError, ValueError):
+        millis = 0
+    if millis > 0:
+        attrs["updated_at"] = datetime.fromtimestamp(millis / 1000, tz=UTC).isoformat()
+    source = item.get("source")
+    if isinstance(source, str) and source:
+        attrs["changed_by"] = source
+    return attrs
+
+
+def sync_attributes(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    """updated_at, changed_by and whether the change has reached the car, from chronos Metadata.
+
+    ``sync_status`` is ``synced`` once the car has it; ``syncing``, ``retrying`` or ``retrying_car_offline`` while
+    it's on its way, and ``error`` if the car refused it. The gateway leaves out SYNC_STATUS_UNKNOWN.
+    """
+    attrs = updated_at_attributes(metadata)
+    sync = (metadata or {}).get("syncStatus") if isinstance(metadata, dict) else None
+    if isinstance(sync, dict):
+        status = sync.get("status")
+        if isinstance(status, str) and status and status != "SYNC_STATUS_UNKNOWN":
+            attrs["sync_status"] = status.lower()
+        if sync.get("message"):
+            attrs["sync_message"] = sync["message"]
+    return attrs
+
+
 # ----- air purification (PreCleaningService/GetPreCleaning, gateway JSON) -----
 
 
