@@ -88,6 +88,44 @@ def error_attributes(frame: dict[str, Any] | None) -> dict[str, Any]:
     return {}
 
 
+# ----- air purification (PreCleaningService/GetPreCleaning, gateway JSON) -----
+
+
+def _iso(value: Any) -> str | None:
+    if isinstance(value, dict):
+        try:
+            seconds = int(value.get("seconds") or 0)
+        except (TypeError, ValueError):
+            return None
+        return datetime.fromtimestamp(seconds, tz=UTC).isoformat() if seconds > 0 else None
+    return None
+
+
+def air_purification_attributes(info: dict[str, Any] | None) -> dict[str, Any]:
+    """Attributes for Air purification last cycle: when it started, when the air was measured and what it read.
+
+    ``air_quality_index`` is the car's own index; ``pm2_5`` is what the Air quality sensor would show. Zero means
+    not measured, so both are left out then (an XC40 sends 0 for both, 28 Nov 2026).
+    """
+    if not isinstance(info, dict):
+        return {}
+    attrs: dict[str, Any] = {}
+    for name, key in (("started_at", "startedAt"), ("measured_at", "measurementDate")):
+        stamp = _iso(info.get(key))
+        if stamp:
+            attrs[name] = stamp
+    for name, key in (("air_quality_index", "measuredAirQualityIndex"), ("pm2_5", "measuredParticulateMatter25")):
+        value = info.get(key)
+        if isinstance(value, int) and value > 0:
+            attrs[name] = value
+    if _iso(info.get("lastCycleCompleted")):
+        attrs["last_cycle_valid"] = bool(info.get("lastCycleValid", False))
+    health = info.get("airFilterHealthStatus")
+    if isinstance(health, str) and not health.endswith("_UNSPECIFIED"):
+        attrs["air_filter_health"] = health.removeprefix("AIR_FILTER_HEALTH_STATUS_").lower()
+    return attrs
+
+
 # ----- raw protobuf (for replies outside the JSON gateway) -----
 
 
