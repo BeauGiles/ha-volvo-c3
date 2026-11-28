@@ -6,8 +6,15 @@ Dates are 2026.
 
 ## Unreleased
 
+### Added
+
+- **The software update shows its full release notes.** Volvo sends the app's release notes with the update details; the update entity now offers them under "Release notes", converted from Volvo's markup to plain text. The short summary is unchanged.
+- **The car tracker says when its parked position is out of date.** A `location_stale` attribute carries Volvo's own flag. It's true while the car is being driven, when the tracker still shows where it last parked, and clears once it parks again (seen on an XC40).
+
 ### Fixed
 
+- **The tailgate lock reads the car's own tailgate lock signal.** It used to guess from the central lock and remember a tailgate unlock sent from Home Assistant, because no separate signal was known. The exterior reply carries `tailgateLock` (seen on an XC40), so it's used when present. After an unlock from Home Assistant, the lock shows unlocked until the car sends a newer reading. Cars without the signal keep the old behaviour.
+- **The charge current slider follows the car's own range.** The car record says which currents the car accepts: 6–32 A on an Australian XC40, up to 48 A in North America. The slider was fixed at 6–32 A.
 - **The Target SoC slider starts at the car's own minimum.** The car record says the lowest target charge level the car accepts (50 % on an XC40). The slider used to start at 20 %, so values the car would refuse could be picked. When the car record doesn't say, it still starts at 20 %.
 - **Start charging, Stop charging, Charge current and Charge limit report it when the car's service says no.** These charging commands only checked that Volvo's server took the request, so a refusal looked like a success. Their reply is now read too: a charge-now reply with a validation, internal or not-found error, or a SetAmpLimit or SetTargetSoc reply that says the car is offline or reported an error, raises an error in Home Assistant. A reply without a status is let through as before. Volvo's replies to these commands are now logged at INFO, like the other commands, so we can confirm the format on a real car. Matches Polestar C3 ([#52](https://github.com/BeauGiles/ha-polestar-c3/pull/52)), from ericyew ([67952fd](https://github.com/ericyew/unofficial-polestar-api/commit/67952fdf5d5bf453d52fc3a7a992b613c288598b)).
 

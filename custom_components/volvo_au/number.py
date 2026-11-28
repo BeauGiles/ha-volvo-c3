@@ -56,6 +56,12 @@ class VolvoChargeCurrentLimit(VolvoEntity, NumberEntity):
         self._attr_unique_id = (
             f"{DOMAIN}_{coordinator.client.vin}_charge_current_limit"
         )
+        # The car record's own range: 6–32 A on an Australian XC40, up to 48 A on North American cars.
+        car = coordinator.car_info or {}
+        low, high = car.get("chargeAmperageMinLimit"), car.get("chargeAmperageMaxLimit")
+        if all(isinstance(v, int) and not isinstance(v, bool) for v in (low, high)) and 0 < low < high <= 80:
+            self._attr_native_min_value = low
+            self._attr_native_max_value = high
 
     @property
     def native_value(self) -> float | None:

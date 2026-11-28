@@ -6,6 +6,8 @@ app's (com.volvocars.conncar.ota.mobcache) and match the Polestar app's.
 
 from __future__ import annotations
 
+import html
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -128,3 +130,21 @@ def installed_version(info: dict[str, Any] | None, car: dict[str, Any] | None, c
     if advertised_is_installed(info):
         return info["version"]
     return cached or (car or {}).get("consumerSoftwareVersion") or None
+
+
+def release_notes(text: str | None) -> str | None:
+    """The app's release notes as plain Markdown.
+
+    Volvo sends them in its own markup: ``<textblock>`` paragraphs, ``<linefeed/>`` line breaks and
+    sometimes ``<bullet>`` items. Anything else is dropped as a tag; the words are kept.
+    """
+    if not text:
+        return None
+    out = re.sub(r"<linefeed\s*/>", "\n", text)
+    out = re.sub(r"<bullet[^>]*>", "\n- ", out)
+    out = re.sub(r"</textblock>", "\n\n", out)
+    out = re.sub(r"<[^>]+>", "", out)
+    out = html.unescape(out)
+    lines = [line.strip() for line in out.splitlines()]
+    out = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+    return out or None

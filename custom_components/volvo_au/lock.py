@@ -92,11 +92,13 @@ class VolvoTailgateLock(VolvoEntity, LockEntity):
     def __init__(self, coordinator: VolvoCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.client.vin}_tailgate_lock"
-        # Latched view of "is the tailgate effectively unlocked right now?".
-        # We can't read this directly from the car — there's no tailgate-lock signal
-        # and the central lock doesn't change when only the boot is unlocked. So we
-        # track it ourselves and clear it when the car gives us a clean signal.
+        # The exterior reply carries ``tailgateLock`` (seen on an XC40, 28 Nov 2026), which is used when present.
+        # Without it, the central lock doesn't change when only the boot is unlocked, so the state is
+        # latched here and cleared when the car gives a clean signal.
         self._latched_unlocked: bool = False
+        # Exterior timestamp when the tailgate was unlocked from here: until a newer reading arrives,
+        # a stale "locked" tailgateLock doesn't undo the unlock.
+        self._unlocked_at_reading: Any = None
         self._last_central_lock: str | None = None
         self._was_tailgate_open: bool = False
 
@@ -105,6 +107,20 @@ class VolvoTailgateLock(VolvoEntity, LockEntity):
             "exterior"
         ) or {}
         return ext.get("centralLock")
+
+    def _exterior(self) -> dict[str, Any]:
+        return ((self.coordinator.data or {}).get("exterior") or {}).get("exterior") or {}
+
+    def _read_tailgate_lock(self) -> bool | None:
+        """True / False from the car's own ``tailgateLock``, None when it doesn't send one."""
+        v = self._exterior().get("tailgateLock")
+        if not isinstance(v, str):
+            return None
+        if v.endswith("_UNLOCKED"):
+            return False
+        if v.endswith("_LOCKED"):
+            return True
+        return None
 
     def _read_tailgate_open(self) -> bool | None:
         ext = ((self.coordinator.data or {}).get("exterior") or {}).get(
@@ -117,6 +133,10 @@ class VolvoTailgateLock(VolvoEntity, LockEntity):
 
     @property
     def is_locked(self) -> bool | None:
+        reported = self._read_tailgate_lock()
+        if reported is not None:
+            pending = self._latched_unlocked and self._exterior().get("timestamp") == self._unlocked_at_reading
+            return False if pending and reported else reported
         # If user/elsewhere locked the car, that overrides our latched unlock.
         cl = self._read_central()
         if cl is None:
@@ -129,6 +149,8 @@ class VolvoTailgateLock(VolvoEntity, LockEntity):
         return False if self._latched_unlocked else True
 
     def _handle_coordinator_update(self) -> None:
+        if self._read_tailgate_lock() is not None and self._exterior().get("timestamp") != self._unlocked_at_reading:
+            self._latched_unlocked = False  # a fresh reading from the car: trust it from here on
         cl = self._read_central()
         tg_open = self._read_tailgate_open()
         # Lock-all (centralLock flipped LOCKED) clears the latched unlock when we also
@@ -160,6 +182,7 @@ class VolvoTailgateLock(VolvoEntity, LockEntity):
         ensure_car_online(self.coordinator)
         _LOGGER.debug("Unlock tailgate")
         self._latched_unlocked = True
+        self._unlocked_at_reading = self._exterior().get("timestamp")
         self._was_tailgate_open = bool(self._read_tailgate_open())
         self.async_write_ha_state()
         res = await self.coordinator.client.unlock_tailgate()

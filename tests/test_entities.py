@@ -138,6 +138,22 @@ def test_target_soc_slider_starts_at_the_cars_lowest_level(volvo, car_info, expe
     assert volvo.number.VolvoTargetSoc(coordinator)._attr_native_min_value == expected
 
 
+@pytest.mark.parametrize(
+    ("car_info", "expected"),
+    [
+        ({"chargeAmperageMinLimit": 6, "chargeAmperageMaxLimit": 32}, (6, 32)),  # XC40, Australia
+        ({"chargeAmperageMinLimit": 6, "chargeAmperageMaxLimit": 48}, (6, 48)),  # North American car
+        ({"chargeAmperageMinLimit": None, "chargeAmperageMaxLimit": None}, (6, 32)),
+        ({"chargeAmperageMinLimit": 32, "chargeAmperageMaxLimit": 6}, (6, 32)),
+        (None, (6, 32)),
+    ],
+)
+def test_charge_current_range_follows_the_car_record(volvo, car_info, expected):
+    coordinator = SimpleNamespace(car_info=car_info, client=SimpleNamespace(vin="VIN"))
+    number = volvo.number.VolvoChargeCurrentLimit(coordinator)
+    assert (number._attr_native_min_value, number._attr_native_max_value) == expected
+
+
 def test_every_gating_flag_in_the_tables_is_a_known_capability_name(volvo):
     flags = {d.requires_capability for d in volvo.sensor.SENSORS if d.requires_capability}
     flags |= {d.requires_capability for d in volvo.binary_sensor.DESCRIPTIONS if d.requires_capability}
@@ -556,3 +572,58 @@ def test_any_door_open_and_climate_active(volvo):
     assert volvo.binary_sensor.climate_active({}) is None
     by_key = {d.key: d for d in volvo.binary_sensor.DESCRIPTIONS}
     assert by_key["climate_active"].requires_data == "parking_climatization"
+
+
+def _tailgate(volvo, exterior):
+    coordinator = SimpleNamespace(
+        car_info={}, client=SimpleNamespace(vin="VIN"), data={"exterior": {"exterior": exterior}}
+    )
+    return volvo.lock.VolvoTailgateLock(coordinator), coordinator
+
+
+def test_tailgate_lock_reads_the_cars_own_signal(volvo):
+    # The XC40 sends tailgateLock next to centralLock (28 Nov 2026 dumps).
+    lock, _ = _tailgate(volvo, {"centralLock": "LOCK_STATUS_LOCKED", "tailgateLock": "LOCK_STATUS_UNLOCKED"})
+    assert lock.is_locked is False
+    lock, _ = _tailgate(volvo, {"centralLock": "LOCK_STATUS_UNLOCKED", "tailgateLock": "LOCK_STATUS_LOCKED"})
+    assert lock.is_locked is True
+
+
+def test_tailgate_lock_falls_back_to_the_central_lock_without_the_signal(volvo):
+    lock, _ = _tailgate(volvo, {"centralLock": "LOCK_STATUS_LOCKED"})
+    assert lock.is_locked is True
+    lock, _ = _tailgate(volvo, {"centralLock": "LOCK_STATUS_UNLOCKED", "tailgateLock": "LOCK_STATUS_UNSPECIFIED"})
+    assert lock.is_locked is False
+
+
+def test_tailgate_unlock_holds_until_the_car_sends_a_newer_reading(volvo):
+    lock, coordinator = _tailgate(
+        volvo, {"timestamp": {"seconds": "100"}, "centralLock": "LOCK_STATUS_LOCKED", "tailgateLock": "LOCK_STATUS_LOCKED"}
+    )
+    lock._latched_unlocked = True  # what async_unlock sets
+    lock._unlocked_at_reading = {"seconds": "100"}
+    assert lock.is_locked is False  # the old reading still says locked: keep showing the unlock
+
+    coordinator.data = {"exterior": {"exterior": {
+        "timestamp": {"seconds": "160"}, "centralLock": "LOCK_STATUS_LOCKED", "tailgateLock": "LOCK_STATUS_LOCKED"}}}
+    lock._handle_coordinator_update = lambda: None  # base class needs Home Assistant; test the clearing below
+    assert lock.is_locked is True  # a newer reading wins
+
+
+def test_parked_location_reads_the_stale_flag():
+    # StreamLastParkedLocations: {1 vin, 2 location {1 lon, 2 lat, 3 time}, 3 stale}. Stale was true while an
+    # XC40 was being driven (28 Nov 2026). Run just the decoder from volvo_api's source, like the test above.
+    import struct
+    from pathlib import Path
+
+    source = (Path(__file__).parent.parent / "custom_components/volvo_au/volvo_api.py").read_text()
+    start = source.index("def _parse_parked_location_frame")
+    end = source.index("\ndef ", start + 10)
+    namespace = {"Any": object, "struct": struct}
+    exec(source[start:end], namespace)
+    parse = namespace["_parse_parked_location_frame"]
+
+    position = b"\x09" + struct.pack("<d", 151.2) + b"\x11" + struct.pack("<d", -33.8) + b"\x1a\x02\x08\x05"
+    frame = b"\x0a\x03VIN" + b"\x12" + bytes([len(position)]) + position
+    assert parse(frame + b"\x18\x01") == {"longitude": 151.2, "latitude": -33.8, "timestamp": 5, "stale": True}
+    assert parse(frame)["stale"] is False

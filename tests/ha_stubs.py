@@ -157,6 +157,6 @@ def load_volvo(monkeypatch: Any, registry: Any = None) -> types.SimpleNamespace:
         return module
 
     for name in ("const", "livestream", "polltiers", "powertrain", "climate", "journal", "schedule", "online",
-                 "coordinator", "entity", "button", "sensor", "binary_sensor", "switch", "number", "select", "time"):
+                 "coordinator", "entity", "button", "sensor", "binary_sensor", "switch", "number", "select", "time", "lock"):
         load(name)
     return types.SimpleNamespace(**modules)
