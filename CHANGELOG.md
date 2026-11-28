@@ -6,6 +6,12 @@ Dates are 2026.
 
 ## Unreleased
 
+## 0.5.1 (28 November)
+
+### Added
+
+- **Diagnostics ask for the car's official images.** The Volvo app shows pictures of the actual car, as built, from an image service the integration doesn't use yet. Downloading diagnostics now lists the image links and the paint colour, to see whether they'd make a good device picture. The links expire after a while.
+
 ## 0.5.0 (28 November)
 
 ### Added
