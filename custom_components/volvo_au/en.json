@@ -210,10 +210,10 @@
         "name": "Charging amp limit"
       },
       "avg_consumption": {
-        "name": "Average consumption"
+        "name": "Average consumption (trip)"
       },
       "avg_speed": {
-        "name": "Average speed"
+        "name": "Average speed (trip)"
       },
       "avg_speed_auto": {
         "name": "Average speed (auto)"
@@ -344,7 +344,7 @@
         "name": "Trip meter (auto)"
       },
       "trip_manual_km": {
-        "name": "Trip meter (manual)"
+        "name": "Trip meter (manual trip)"
       },
       "tyre_front_left_pressure": {
         "name": "Front left tyre pressure"
