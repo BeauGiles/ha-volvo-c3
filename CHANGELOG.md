@@ -8,6 +8,16 @@ Dates are 2026.
 
 ### Added
 
+- **Air purification last cycle has attributes:**
+  - `started_at`: when the cycle started.
+  - `measured_at`: when the cabin air was last measured.
+  - `air_quality_index`: the car's own index.
+  - `pm2_5`.
+  - `last_cycle_valid`.
+  - `air_filter_health`, when the car reports it.
+
+  An XC40 sends 0 for both readings, so those two stay hidden until it measures something. Matches Polestar C3.
+- **Climate time remaining shows the longest climate run** as `max_runtime_minutes`, from the car record (30 on an XC40). Matches Polestar C3.
 - **Charge now.** A binary sensor shows whether charge now is overriding the charge timer, from the same state the app reads (`GetEnabledOverrideChargeTimerAction`). Its attributes say the exact state, including pending, and which charge-now button the app offers (`charge_now`, `resume_schedule` or `not_applicable`). It's shown when the car record says `supportsChargeNowTimerOverride`, as an XC40's does. Matches Polestar C3.
 - **Last charging error.** A diagnostic timestamp sensor listens to the backend's error stream, which stays silent until the car can't apply a change to charging or the climate timers. It then shows when that happened, with `setting`, `error` and `action` attributes, for example charge now, `car`, `start_override_charge_timer`. Its state changes, so automations can trigger on it. It runs with the live updates option. Matches Polestar C3.
 - **The software update shows when the current software was installed.** An `installed_at` attribute comes from a field in the gRPC car record that neither app names (92); the REST car record doesn't have it. On an XC40 it's 4 Oct 2026, about 47 s after the 5.2.16 install finished. It's read every 6 hours and right after an install completes.
@@ -19,6 +29,7 @@ Dates are 2026.
 
 ### Fixed
 
+- **The alarm sensor now reads the car's alarm.** It looked for `alarmStatus`, which the car never sends. The car sends `alarm`, for example `ALARM_STATUS_IDLE` on a parked XC40, so Alarm triggered could never turn on. The old key is still read as a fallback. Matches Polestar C3.
 - **The quick polling after a trip starts when the car is parked.** At the end of a trip the integration polls every 5 seconds for 5 minutes, so the lock state catches up when the car is locked, and checks the trip journal for the new trip more often. It used to wait for the car to report Abandoned, which an XC40 only does 7–10 minutes after parking, by when the driver has usually locked it and left. It now starts as soon as the car stops reporting Driving (or Engine on). A missing or unknown usage mode no longer counts as the end of a trip.
 - **The tailgate lock reads the car's own tailgate lock signal.** It used to guess from the central lock and remember a tailgate unlock sent from Home Assistant, because no separate signal was known. The exterior reply carries `tailgateLock` (seen on an XC40), so it's used when present. After an unlock from Home Assistant, the lock shows unlocked until the car sends a newer reading. Cars without the signal keep the old behaviour.
 - **The charge current slider follows the car's own range.** The car record says which currents the car accepts: 6–32 A on an Australian XC40, up to 48 A in North America. The slider was fixed at 6–32 A.

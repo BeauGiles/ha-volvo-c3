@@ -170,12 +170,39 @@ def test_every_gating_flag_in_the_tables_is_a_known_capability_name(volvo):
         ({}, None),
         ({"exterior": {"exterior": {}}}, None),
         ({"exterior": {"exterior": {"centralLock": "LOCKED"}}}, False),
-        ({"exterior": {"exterior": {"alarmStatus": "ALARM_STATUS_IDLE"}}}, False),
+        # As an XC40 sends it (28 Nov 2026), and the key earlier versions read.
+        ({"exterior": {"exterior": {"alarm": "ALARM_STATUS_IDLE"}}}, False),
+        ({"exterior": {"exterior": {"alarm": "ALARM_STATUS_TRIGGERED"}}}, True),
         ({"exterior": {"exterior": {"alarmStatus": "ALARM_STATUS_TRIGGERED"}}}, True),
     ],
 )
 def test_alarm_is_ok_unless_the_car_says_triggered(volvo, snapshot, expected):
-    assert volvo.binary_sensor._alarm(snapshot, "alarmStatus") is expected
+    assert volvo.binary_sensor._alarm(snapshot) is expected
+    by_key = {d.key: d for d in volvo.binary_sensor.DESCRIPTIONS}
+    assert by_key["alarm_triggered"].value_fn(snapshot) is expected
+
+
+def test_air_purification_and_climate_attributes(monkeypatch):
+    volvo = load_volvo(monkeypatch, FakeRegistry())
+    by_key = {d.key: d for d in volvo.sensor.SENSORS}
+    # As an XC40 sends it (28 Nov 2026).
+    snap = {"pre_cleaning": {"preCleaning": {
+        "lastCycleCompleted": {"seconds": "1795830518", "nanos": 0},
+        "measurementDate": {"seconds": "1795851438", "nanos": 468423000},
+        "startedAt": {"seconds": "1790558019", "nanos": 479431000},
+        "lastCycleValid": True, "measuredAirQualityIndex": 0, "measuredParticulateMatter25": 0,
+        "airFilterHealthStatus": "AIR_FILTER_HEALTH_STATUS_UNSPECIFIED"}}}
+    attrs = by_key["air_purification_last_cycle"].attrs_fn(snap, {})
+    assert attrs == {"started_at": "2026-09-28T01:13:39+00:00", "measured_at": "2026-11-28T07:37:18+00:00",
+                     "last_cycle_valid": True}
+    snap["pre_cleaning"]["preCleaning"].update(measuredAirQualityIndex=2, measuredParticulateMatter25=7)
+    attrs = by_key["air_purification_last_cycle"].attrs_fn(snap, {})
+    assert attrs["air_quality_index"] == 2 and attrs["pm2_5"] == 7
+    assert by_key["air_purification_last_cycle"].attrs_fn({}, {}) == {}
+
+    climate = by_key["climate_time_remaining"].attrs_fn
+    assert climate({}, {"parkingClimatizationMaxRuntime": 30}) == {"max_runtime_minutes": 30}
+    assert climate({}, {}) == {}
 
 
 @pytest.mark.parametrize(

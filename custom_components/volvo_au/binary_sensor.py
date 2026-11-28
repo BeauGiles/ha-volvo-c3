@@ -70,20 +70,15 @@ def has_sunroof(snap: dict[str, Any] | None) -> bool | None:
     return v is not None and not v.endswith("_UNSPECIFIED")
 
 
-def _alarm(snap: dict[str, Any], key: str) -> bool | None:
-    """True when the car's theft-alarm enum reports TRIGGERED.
+def _alarm(snap: dict[str, Any], key: str = "alarm") -> bool | None:
+    """True when the car's theft alarm reports TRIGGERED.
 
-    NOTE: the exact JSON key name below ("alarmStatus") is a best-effort
-    guess, not yet confirmed against a live ExteriorService/GetExterior
-    payload. The app-side proto enum is AlarmStatus with values
-    ALARM_STATUS_UNSPECIFIED / ALARM_STATUS_IDLE (or _OFF) /
-    ALARM_STATUS_TRIGGERED, matching the _TRIGGERED/_UNSPECIFIED suffix
-    convention used elsewhere in this file, but the flat "Digital Twin"
-    field name it's exposed under here hasn't been verified. If this sensor
-    stays stuck at "off"/unavailable, enable debug logging and inspect a
-    raw get_exterior() response to find the real key, then update it here.
+    The gateway sends it as ``alarm`` (exterior field 15): an XC40 sends ``ALARM_STATUS_IDLE`` when parked
+    (28 Nov 2026). Earlier versions read ``alarmStatus``, which the car never sends, so it's kept only as a fallback.
     """
     v = _ext(snap, key)
+    if v is None and key == "alarm":
+        v = _ext(snap, "alarmStatus")
     if v is None:
         # A car that has reported its exterior but sends no alarm state is not in alarm (shown as OK).
         return False if (snap.get("exterior") or {}).get("exterior") else None
@@ -277,7 +272,7 @@ DESCRIPTIONS: tuple[VolvoBinaryDescription, ...] = (
         key="alarm_triggered",
         translation_key="alarm_triggered",
         device_class=BinarySensorDeviceClass.PROBLEM,  # shows OK / Problem
-        value_fn=lambda s: _alarm(s, "alarmStatus"),
+        value_fn=_alarm,
     ),
     VolvoBinaryDescription(
         key="charge_port",

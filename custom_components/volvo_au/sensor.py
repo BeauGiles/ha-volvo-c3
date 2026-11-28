@@ -192,6 +192,8 @@ def _epoch_to_dt(seconds: Any) -> datetime | None:
 @dataclass(frozen=True, kw_only=True)
 class VolvoSensorDescription(SensorEntityDescription):
     value_fn: Callable[[dict[str, Any]], Any]
+    # Attributes from the polled data and the car record: (data, car_info) -> attributes.
+    attrs_fn: Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]] | None = None
     requires_combustion_engine: bool = False
     requires_capability: str | None = None
     requires_data: str | None = None
@@ -508,6 +510,11 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DURATION,
         value_fn=climate_minutes_left,
+        attrs_fn=lambda s, car: (
+            {"max_runtime_minutes": car["parkingClimatizationMaxRuntime"]}
+            if isinstance(car.get("parkingClimatizationMaxRuntime"), int) and car["parkingClimatizationMaxRuntime"] > 0
+            else {}
+        ),
     ),
     VolvoSensorDescription(
         key="air_purification_last_cycle",
@@ -519,6 +526,7 @@ SENSORS: tuple[VolvoSensorDescription, ...] = (
         value_fn=lambda s: _epoch_to_dt(
             _path(s, "pre_cleaning", "preCleaning", "lastCycleCompleted", "seconds")
         ),
+        attrs_fn=lambda s, car: chronos.air_purification_attributes(_path(s, "pre_cleaning", "preCleaning")),
     ),
     _tyre("front_left", "front-left"),
     _tyre("front_right", "front-right"),
@@ -583,6 +591,16 @@ class VolvoSensor(VolvoEntity, SensorEntity):
     def native_value(self) -> Any:
         try:
             return self.entity_description.value_fn(self.coordinator.data or {})
+        except Exception:  # noqa: BLE001
+            return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        fn = self.entity_description.attrs_fn
+        if fn is None:
+            return None
+        try:
+            return fn(self.coordinator.data or {}, self.coordinator.car_info or {}) or None
         except Exception:  # noqa: BLE001
             return None
 
