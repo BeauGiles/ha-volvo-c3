@@ -20,3 +20,9 @@ def test_redact_removes_secrets_places_and_vin():
     assert out["trips"][0]["id"] == redact.REDACTED and out["trips"][0]["distance_km"] == 4.8
     assert "YV1ABC" not in str(out)
     assert data["entry"]["refresh_token"] == "secret"  # the input is not changed
+
+
+def test_secrets_are_removed_from_raw_replies():
+    snap = {"car_preview": {"unknown_1": {"unknown_1": "PCID123456", "unknown_3": "SERIAL99"}}}
+    out = redact.redact(snap, vin=None, secrets=("PCID123456", "SERIAL99"))
+    assert "PCID123456" not in str(out) and "SERIAL99" not in str(out)

@@ -18,6 +18,9 @@ SLOW_TTLS: dict[str, float] = {
     "target_soc": 120.0,
     "amp_limit": 120.0,
     "global_charge_timer": 120.0,
+    "data_sharing": 3600.0,
+    # Car record field 92 (software install time) over raw gRPC; also re-read when an install completes.
+    "software_installed": 21600.0,
 }
 
 # Readers whose cache must be dropped when we change the value ourselves.

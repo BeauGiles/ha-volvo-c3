@@ -26,7 +26,8 @@ from .const import (
     POLL_POST_CMD_FAST,
     POLL_POST_CMD_WINDOW,
 )
-from .livestream import STREAMS, StreamPolicy
+from . import ota
+from .livestream import BACKOFF_MAX, BACKOFF_START, PROVEN_AFTER_SECONDS, STREAMS, StreamPolicy
 from .polltiers import is_active, on_a_trip
 from .powertrain import capability, sections_without_data
 from .volvo_api import VolvoApiError, VolvoAuthError, VolvoClient
@@ -96,6 +97,7 @@ class VolvoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_command_at: float = 0.0
         self._post_trip_until: float = 0.0
         self._prev_in_use: bool | None = None
+        self._last_software_state: str | None = None
         # Snapshot sections the first poll found empty; entities that depend on them are hidden (see entity.py).
         self.no_data_sections: frozenset[str] = frozenset()
         self._first_poll_done = False
@@ -133,6 +135,7 @@ class VolvoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed(f"api: {e}") from e
 
         snap = self._keep_streamed(snap)
+        self._note_software_state(snap)
 
         if not self._first_poll_done:
             self._first_poll_done = True
@@ -141,6 +144,15 @@ class VolvoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.info("No data for %s on the first poll; those entities are hidden", sorted(self.no_data_sections))
         self._adapt_interval(snap)
         return snap
+
+    def _note_software_state(self, snap: dict[str, Any]) -> None:
+        """When an OTA install completes, re-read the install time on the next poll rather than within 6 hours."""
+        state = ota.state_name(snap.get("software_info") if isinstance(snap.get("software_info"), dict) else None)
+        if state is None:
+            return
+        if state == "installation_completed" and self._last_software_state not in (None, "installation_completed"):
+            self.client.software_install_completed()
+        self._last_software_state = state
 
     def _adapt_interval(self, snap: dict[str, Any]) -> bool:
         """Choose the next poll interval from the latest data. Returns True when it changed."""
@@ -196,6 +208,9 @@ class VolvoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._stream_tasks[name] = self.hass.async_create_background_task(
                 self._run_stream(name), name=f"volvo-{self.client.vin}-{name}-stream"
             )
+        self._stream_tasks["charging_error"] = self.hass.async_create_background_task(
+            self._run_error_stream(), name=f"volvo-{self.client.vin}-charging-error-stream"
+        )
 
     async def async_stop_streams(self) -> None:
         tasks = list(self._stream_tasks.values())
@@ -229,6 +244,35 @@ class VolvoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.info("Volvo sends %s as a one-off snapshot, not a stream; it is polled instead", name)
                 return
             await asyncio.sleep(delay)
+
+    async def _run_error_stream(self) -> None:
+        """Listen to the chronos error stream. It's silent while all is well, so a quiet connection is normal.
+
+        The gateway closes a silent connection after STREAM_IDLE_TIMEOUT; that is a clean end, not a failure.
+        Each message becomes the ``charging_error`` section (the Last charging error sensor).
+        """
+        backoff = BACKOFF_START
+        while True:
+            started = time.monotonic()
+            try:
+                async for frame in self.client.stream_errors():
+                    if isinstance(frame, dict) and frame:
+                        _LOGGER.info("Volvo reported a charging or climate timer error: %s", frame)
+                        self._apply_stream_frame("charging_error", frame)
+            except asyncio.CancelledError:
+                raise
+            except TimeoutError:  # includes aiohttp's read timeout: silent for the whole idle timeout
+                pass  # reconnect at once
+            except Exception as err:  # noqa: BLE001 - never take the integration down
+                _LOGGER.debug("Volvo error stream failed (%s: %s); retrying in %.0f s", type(err).__name__, err, backoff)
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, BACKOFF_MAX)
+                continue
+            if time.monotonic() - started >= PROVEN_AFTER_SECONDS:
+                backoff = BACKOFF_START
+                continue
+            await asyncio.sleep(backoff)  # closed quickly: don't turn it into a request loop
+            backoff = min(backoff * 2, BACKOFF_MAX)
 
     def _keep_streamed(self, snap: dict[str, Any]) -> dict[str, Any]:
         """Keep streamed sections that this poll failed to read or got back empty.

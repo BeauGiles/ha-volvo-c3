@@ -113,6 +113,9 @@
       "hood": {
         "name": "Bonnet"
       },
+      "charge_now": {
+        "name": "Charge now"
+      },
       "in_use": {
         "name": "In use"
       },
@@ -450,6 +453,9 @@
           "engine_on": "Engine on",
           "engine_off": "Engine off"
         }
+      },
+      "charging_error": {
+        "name": "Last charging error"
       },
       "vehicle_info": {
         "name": "Vehicle info"

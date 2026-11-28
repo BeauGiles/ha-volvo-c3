@@ -5,6 +5,7 @@ Matches the Polestar C3 Software update entity (same backend services, same attr
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 import voluptuous as vol
@@ -125,7 +126,15 @@ class VolvoSoftwareUpdate(VolvoEntity, UpdateEntity, RestoreEntity):
             "scheduler_status": schedule.get("status"),
             "scheduler_scheduled_time": schedule.get("scheduled_time"),
             "scheduler_set_by": schedule.get("set_by"),
+            # When the current software was installed (car record field 92). Not sent before a car's first OTA.
+            "installed_at": self._installed_at(),
         }
+
+    def _installed_at(self) -> str | None:
+        seconds = ((self.coordinator.data or {}).get("software_installed") or {}).get("installed_at")
+        if not isinstance(seconds, int) or seconds <= 0:
+            return None
+        return datetime.fromtimestamp(seconds, tz=UTC).isoformat()
 
     def _software_id(self) -> str:
         software_id = self._info().get("update_id")

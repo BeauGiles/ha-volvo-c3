@@ -30,7 +30,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
-from . import climate, journal, ota
+from . import chronos, climate, journal, ota
 from .polltiers import SlowTiers
 from .const import (
     API_BASE,
@@ -1175,6 +1175,41 @@ class VolvoClient:
             self._chronos_body(),
         )
 
+    async def get_charge_now_state(self) -> dict[str, Any]:
+        """Whether charge now overrides the charge timer: {overrideChargeTimerState, enabledOverrideChargeTimerAction}."""
+        return await self._ndjson_first_frame(
+            "/chronos.services.v1.ChargeNowService/GetEnabledOverrideChargeTimerAction",
+            self._chronos_body(),
+        )
+
+    async def get_data_sharing(self) -> dict[str, bool] | None:
+        """The "share remote function data" consent: {enabled, car_in_sync, read_only}. Raw gRPC (a server stream)."""
+        frame = await self._grpc_first_frame(
+            "/userServices.PrivacySettings/GetRemoteFunctionDataSharing",
+            self._pb_len_delim(1, self.vin.encode("ascii")),
+        )
+        return chronos.data_sharing_from_reply(frame)
+
+    async def get_software_installed(self) -> dict[str, Any]:
+        """{"installed_at": epoch seconds or None} from the gRPC car record (field 92; the REST record lacks it)."""
+        frame = await self._grpc_first_frame("/car_information.CarInformation/GetMyCars", b"")
+        return {"installed_at": chronos.installed_at_from_my_cars(frame, self.vin)}
+
+    def software_install_completed(self) -> None:
+        """An OTA install just finished: re-read the install time on the next poll instead of within 6 hours."""
+        self._tiers.invalidate("software_installed")
+
+    async def read_raw(self, path: str, payload: bytes, *, timeout: float = 10.0) -> Any:
+        """One raw gRPC reply from a read-only method, described field by field (for diagnostics)."""
+        if not path.rsplit("/", 1)[-1].startswith(("Get", "Stream", "is")):
+            raise ValueError(f"{path} is not a read")
+        frame = await self._grpc_first_frame(path, payload, timeout=timeout)
+        return chronos.describe(frame) if frame else "no reply message"
+
+    def stream_errors(self):
+        """The chronos error stream: silent until a charging or climate timer change can't be applied."""
+        return self.stream_ndjson("/chronos.services.v1.ErrorService/GetErrors", self._chronos_body())
+
     async def get_amp_limit(self) -> dict[str, Any]:
         return await self._ndjson_first_frame(
             "/chronos.services.v1.AmpLimitService/GetAmpLimit",
@@ -1471,6 +1506,9 @@ class VolvoClient:
             "target_soc": self.get_target_soc,
             "amp_limit": self.get_amp_limit,
             "global_charge_timer": self.get_global_charge_timer,
+            "charge_now": self.get_charge_now_state,
+            "data_sharing": self.get_data_sharing,
+            "software_installed": self.get_software_installed,
             "software_info": self.get_software_info,
             "ota_schedule": self.get_ota_schedule,
             "weather": self.get_weather_report,

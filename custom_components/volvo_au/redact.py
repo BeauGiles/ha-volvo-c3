@@ -11,20 +11,27 @@ from typing import Any
 _REDACT_KEYS = {
     "vin", "id", "refresh_token", "dpop_private_key_pem", "id_token", "app_installation_id",
     "registrationplate", "registration_plate", "latitude", "longitude", "altitude", "heading",
-    "batterypackserialnumber", "plugandchargepcid", "streetaddress", "streetname", "streetnumber", "postalcode", "city", "name", "usernotes", "notes",
+    "batterypackserialnumber", "plugandchargepcid", "visualid", "nickname", "streetaddress", "streetname", "streetnumber", "postalcode", "city", "name", "usernotes", "notes",
 }
 REDACTED = "**REDACTED**"
 
 
-def redact(value: Any, *, vin: str | None = None) -> Any:
-    """A copy of ``value`` with sensitive keys blanked and the VIN removed from every string."""
+def redact(value: Any, *, vin: str | None = None, secrets: tuple[str, ...] = ()) -> Any:
+    """A copy of ``value`` with sensitive keys blanked, and the VIN and ``secrets`` removed from every string.
+
+    ``secrets`` catches identifiers in raw replies, where keys are only field numbers (``unknown_3``).
+    """
     if isinstance(value, dict):
         return {
-            k: REDACTED if str(k).lower() in _REDACT_KEYS else redact(v, vin=vin)
+            k: REDACTED if str(k).lower() in _REDACT_KEYS else redact(v, vin=vin, secrets=secrets)
             for k, v in value.items()
         }
     if isinstance(value, (list, tuple)):
-        return [redact(v, vin=vin) for v in value]
-    if isinstance(value, str) and vin and vin in value:
-        return value.replace(vin, "<VIN>")
+        return [redact(v, vin=vin, secrets=secrets) for v in value]
+    if isinstance(value, str):
+        if vin and vin in value:
+            value = value.replace(vin, "<VIN>")
+        for secret in secrets:
+            if secret and len(secret) >= 4 and secret in value:
+                value = value.replace(secret, REDACTED)
     return value
