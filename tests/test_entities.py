@@ -398,6 +398,43 @@ def test_command_refusal_is_read_from_the_reply(monkeypatch):
     assert refusal([]) is None
 
 
+def test_chronos_charging_refusal_is_read_from_the_reply():
+    # Same approach as above: run just the reply decoders from volvo_api's source.
+    from pathlib import Path
+
+    source = (Path(__file__).parent.parent / "custom_components/volvo_au/volvo_api.py").read_text()
+    start = source.index("COMMAND_STATUS_REASONS")
+    end = source.index("# ----", start)
+    namespace = {"Any": object}
+    exec(source[start:end], namespace)
+    refusal = namespace["chronos_refusal"]
+    start_now = "/chronos.services.v1.ChargeNowService/StartOverrideChargeTimer"
+    amp = "/chronos.services.v1.AmpLimitService/SetAmpLimit"
+    soc = "/chronos.services.v1.TargetSocService/SetTargetSoc"
+    # Charge now: field 1 = chronos ResponseStatus, only SUCCESS (1) is fine
+    assert refusal(start_now, [b"\x08\x01"]) is None
+    assert "rejected" in refusal(start_now, [b"\x08\x02"])
+    assert "internal error" in refusal(start_now, [b"\x08\x03"])
+    assert "could not find" in refusal(start_now, [b"\x08\x04"])
+    # No status, an unlisted one, or a field 1 that is not a number: let through as before
+    assert refusal(start_now, [b""]) is None
+    assert refusal(start_now, []) is None
+    assert refusal(start_now, [b"\x08\x63"]) is None
+    assert refusal(start_now, [b"\x0a\x02id"]) is None
+    # Set verbs: {1 = id, 2 = vin, 3 = delivery status}
+    ack = b"\x0a\x02id\x12\x03VIN"
+    for path in (amp, soc):
+        for ok in (1, 2, 3, 4, 8):
+            assert refusal(path, [ack + bytes([0x18, ok])]) is None
+        assert "offline" in refusal(path, [ack + bytes([0x18, 5])])
+        assert "error" in refusal(path, [ack + bytes([0x18, 6])])
+        assert "error" in refusal(path, [ack + bytes([0x18, 7])])
+        assert refusal(path, [ack]) is None
+    # Other paths are not checked here
+    assert refusal("/chronos.services.v1.AmpLimitService/GetAmpLimit", [ack + b"\x18\x07"]) is None
+    assert refusal("/invocation.InvocationService/Lock", [b"\x08\x02"]) is None
+
+
 def test_charge_time_and_climate_sensors_match_polestar(monkeypatch):
     volvo = load_volvo(monkeypatch, FakeRegistry())
     by_key = {d.key: d for d in volvo.sensor.SENSORS}

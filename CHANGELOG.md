@@ -4,6 +4,12 @@ All notable changes to Volvo C3 (domain `volvo_au`). This integration and [Poles
 
 Dates are 2026.
 
+## Unreleased
+
+### Fixed
+
+- **Start charging, Stop charging, Charge current and Charge limit report it when the car's service says no.** These charging commands only checked that Volvo's server took the request, so a refusal looked like a success. Their reply is now read too: a charge-now reply with a validation, internal or not-found error, or a SetAmpLimit or SetTargetSoc reply that says the car is offline or reported an error, raises an error in Home Assistant. A reply without a status is let through as before. Volvo's replies to these commands are now logged at INFO, like the other commands, so we can confirm the format on a real car. Matches Polestar C3 ([#52](https://github.com/BeauGiles/ha-polestar-c3/pull/52)), from ericyew ([67952fd](https://github.com/ericyew/unofficial-polestar-api/commit/67952fdf5d5bf453d52fc3a7a992b613c288598b)).
+
 ## 0.4.1 (27 November)
 
 ### Added
