@@ -37,6 +37,8 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | Time to full charge | ✅ | ✅ |
 | Time to target charge and to minimum SoC | 🧪 | ✅ |
 | Charge port (hidden on Polestar 2, XC40 and C40, where it always reads closed), plugged in | ✅ | ✅ |
+| Charge now (overriding the charging schedule) | ✅ | ✅ |
+| Last charging error (which setting the car couldn't apply, and why) | ✅ | ✅ |
 | Saved charge locations, "at charge location" | ➖ | ✅ |
 | Location, with address | ✅ | ✅ |
 | Parked location | ➖ | ✅ |
@@ -45,7 +47,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | Sunroof | ◐ | ➖ |
 | Central lock, boot lock | ✅ | ✅ |
 | Alarm triggered, In use, Online, Connection, unavailable reason | ✅ | ✅ |
-| Odometer, trip meters, average consumption, average speed (manual and auto trip) | ✅ | ✅ (average speed hidden on the Polestar 2) |
+| Odometer, trip meters, average consumption, average speed (manual and auto trip) | ✅ | ✅ |
 | Outside temperature | ✅ | ✅ |
 | Service required (with urgency), days, distance and engine hours to service | ✅ | ✅ |
 | Service plan (prepaid service contract: products, end dates, mileage limits) | ➖ | 🧪 |
@@ -58,6 +60,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | Oil level (combustion cars) | ◐ | ➖ |
 | Climate active, status and time remaining | 🧪 | ✅ |
 | Cabin PM2.5 | ✅ | ✅ |
+| Air purification last cycle (start time, air quality index) | ✅ | ✅ |
 | Software version | ✅ | ✅ |
 | Driving journal: last trip, trips and distance this month (opt in) | ✅ | ➖ |
 | VIN, vehicle info, registration plate | ✅ | ✅ |
@@ -104,8 +107,8 @@ Every command shows an error in Home Assistant when Volvo refuses it or does not
 
 | Platform | Examples |
 | --- | --- |
-| Sensor | State of charge, range, charging status, charger connection, charging type, charger power status, cold battery status, charging power, time to target charge and to minimum SoC, climate running status, request type and time remaining, odometer, trip meters, average speed (manual and auto), unavailable reason, service sensors, tyre pressures, software version, Connection, Vehicle info, VIN |
-| Binary sensor | Online, In use, Any door open, Climate active, Engine coolant low, Plugged in, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, bonnet, boot, sunroof, charge port (not on an electric XC40 or C40) |
+| Sensor | State of charge, range, charging status, charger connection, charging type, charger power status, cold battery status, charging power, time to target charge and to minimum SoC, climate running status, request type and time remaining, odometer, trip meters, average speed (manual and auto), unavailable reason, service sensors, tyre pressures, software version, Connection, Vehicle info, VIN, Last charging error, Air purification last cycle |
+| Binary sensor | Online, In use, Any door open, Climate active, Engine coolant low, Plugged in, Charge now, Alarm triggered, Tyre warning, Service required, 12V battery, Brake fluid, Washer fluid, Light status, Battery thermal event, doors, windows, bonnet, boot, sunroof, charge port (not on an electric XC40 or C40) |
 | Device tracker | Location |
 | Update | Software update (install now; `schedule_ota` and `cancel_ota` services) |
 | Lock | Lock, Boot lock |
