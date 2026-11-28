@@ -373,6 +373,46 @@ def command_refusal(frames: list[bytes]) -> str | None:
 
 
 
+# Charge now (Start/StopOverrideChargeTimer) answers with one field: 1 = chronos ResponseStatus
+# (UNKNOWN_ERROR 0, SUCCESS 1, VALIDATION_ERROR 2, INTERNAL_ERROR 3, NOT_FOUND 4), per the Polestar app's proto
+# for the same C3 service; ported from ericyew/unofficial-polestar-api 67952fd (28 Nov 2026).
+CHARGE_NOW_REASONS: dict[int, str] = {
+    2: "the car's charging service rejected the request",
+    3: "the charging service had an internal error",
+    4: "the charging service could not find the car",
+}
+# The chronos "set" verbs (SetAmpLimit, SetTargetSoc) answer {1 = id, 2 = vin, 3 = delivery status}, where the
+# status is the SENT 1 / DELIVERED 2 / SUCCESS 3 / SYNCED 4 / REPLACED 8 lifecycle. These mean it failed.
+CHRONOS_SET_REASONS: dict[int, str] = {
+    5: "the car is offline",
+    6: "the car reported an error",
+    7: "the charging service reported an error",
+}
+
+
+def _is_chronos_command(path: str) -> bool:
+    return ".ChargeNowService/" in path or ".AmpLimitService/Set" in path or ".TargetSocService/Set" in path
+
+
+def chronos_refusal(path: str, frames: list[bytes]) -> str | None:
+    """Why a chronos charging command failed, from its reply (None when it did not, or the reply has no status).
+
+    Only a status that is present and listed counts as a failure. Volvo's replies to these commands have not been
+    seen yet, so a reply without the status (or with one not listed) is let through as before, and logged.
+    """
+    if not _is_chronos_command(path):
+        return None
+    if ".ChargeNowService/" in path:
+        field, reasons = 1, CHARGE_NOW_REASONS
+    else:
+        field, reasons = 3, CHRONOS_SET_REASONS
+    for frame in reversed(frames):
+        status = next((v for f, w, v in _proto_fields(frame) if f == field and w == 0), None)
+        if status is not None:
+            return reasons.get(status)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # DPoP helpers (sync; cheap, no I/O)
 # ---------------------------------------------------------------------------
@@ -823,8 +863,9 @@ class VolvoClient:
         http_status = prog["http_status"]
         grpc_status = prog["headers"].get("grpc-status")
         grpc_message = prog["headers"].get("grpc-message")
-        if path.startswith("/invocation."):
-            # Kept at INFO while we learn what Volvo sends for a command (15 Nov 2026).
+        if path.startswith("/invocation.") or _is_chronos_command(path):
+            # Kept at INFO while we learn what Volvo sends for a command (15 Nov 2026; chronos charging
+            # commands added 28 Nov 2026).
             _LOGGER.info(
                 "Volvo %s: HTTP %s (headers at %s s), grpc-status %s, frames %s at %s s, %s after %s s",
                 path, http_status, prog["headers_at"], grpc_status, [f.hex() for f in frames], prog["times"],
@@ -841,7 +882,7 @@ class VolvoClient:
             return {"ok": False, "timeout": True, "waited_s": waited, "http_status": http_status,
                     "frame_count": len(frames), "frames": [f.hex() for f in frames],
                     "error": f"no final answer from the car after {waited:.0f} s"}
-        refusal = command_refusal(frames) if path.startswith("/invocation.") else None
+        refusal = command_refusal(frames) if path.startswith("/invocation.") else chronos_refusal(path, frames)
         if refusal:
             _LOGGER.warning("Volvo %s: the car refused the command: %s", path, refusal)
         return {
