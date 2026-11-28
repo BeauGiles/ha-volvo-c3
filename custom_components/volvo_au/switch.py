@@ -12,6 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import chronos
 from .const import DOMAIN
 from .coordinator import VolvoCoordinator
 from .entity import VolvoEntity, async_gate_unsupported
@@ -99,6 +100,11 @@ class VolvoChargeScheduleSwitch(VolvoEntity, SwitchEntity):
     def is_on(self) -> bool | None:
         sched = current_schedule(self.coordinator.data or {})
         return sched["enabled"] if sched else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        timer = ((self.coordinator.data or {}).get("global_charge_timer") or {}).get("globalChargeTimer") or {}
+        return chronos.sync_attributes(timer.get("metadata")) or None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._apply(enabled=True)
