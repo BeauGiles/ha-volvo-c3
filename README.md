@@ -90,7 +90,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 
 | Feature | Volvo C3 | Polestar C3 |
 | --- | :---: | :---: |
-| Clear error when a command is refused (offline, privacy mode, in use, busy, timeout) | 🧪 | ✅ |
+| Clear error when a command is refused (offline, privacy mode, in use, busy, timeout) | ✅ | ✅ |
 | Live updates streamed from the car's cloud | 🧪 | ✅ |
 | Adaptive polling (faster while charging, driving or running climate) | ✅ | ✅ |
 | Entities hidden for features the car doesn't have | ✅ | ✅ |

@@ -654,3 +654,19 @@ def test_parked_location_reads_the_stale_flag():
     frame = b"\x0a\x03VIN" + b"\x12" + bytes([len(position)]) + position
     assert parse(frame + b"\x18\x01") == {"longitude": 151.2, "latitude": -33.8, "timestamp": 5, "stale": True}
     assert parse(frame)["stale"] is False
+
+
+def test_command_refusal_says_in_use_plainly(volvo):
+    from types import SimpleNamespace
+
+    def refusal(reason):
+        snap = {"availability": {"availability": {"availabilityStatus": "AVAILABILITY_STATUS_UNAVAILABLE",
+                                                  "unavailableReason": reason}}}
+        with pytest.raises(Exception) as err:
+            volvo.online.ensure_car_online(SimpleNamespace(data=snap))
+        return str(err.value)
+
+    # As shown on 28 Nov 2026 while the XC40 was being driven.
+    in_use = refusal("UNAVAILABLE_REASON_CAR_IN_USE")
+    assert in_use.startswith("The car is in use") and "offline" not in in_use and "Nothing was sent" in in_use
+    assert "has been offline" in refusal("UNAVAILABLE_REASON_NO_INTERNET")

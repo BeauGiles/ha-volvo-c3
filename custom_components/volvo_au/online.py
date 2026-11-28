@@ -203,10 +203,15 @@ def ensure_car_online(coordinator: Any) -> None:
     """Raise before a car command is sent when the car is known to be offline."""
     st = car_status(getattr(coordinator, "data", None))
     if st.online is False:
+        key = str((st.raw or {}).get("unavailableReason") or "").upper().replace("UNAVAILABLE_REASON_", "")
+        if key == "CAR_IN_USE":
+            raise HomeAssistantError("The car is in use, so it can't take commands. Nothing was sent. Try again once it's parked.")
+        if key == "CAR_IN_REMOTE_USE":
+            raise HomeAssistantError("The car is busy with a command from the app. Nothing was sent. Try again in a moment.")
         when = ""
         if st.last_seen is not None:
             when = f" since {dt_util.as_local(st.last_seen).strftime('%H:%M')}"
         why = reason_text(st.raw) or "no mobile signal?"
         raise HomeAssistantError(
-            f"The car is offline{when} ({why}). Nothing was sent. Check the Volvo app."
+            f"The car has been offline{when} ({why}). Nothing was sent. Check the Volvo app."
         )
