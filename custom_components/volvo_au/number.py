@@ -96,6 +96,10 @@ class VolvoTargetSoc(VolvoEntity, NumberEntity):
     def __init__(self, coordinator: VolvoCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.client.vin}_target_soc"
+        # The car record says the lowest target it accepts (50 % on an XC40); the car refuses anything lower.
+        low = (coordinator.car_info or {}).get("targetChargeLevelPercentageMinLimit")
+        if isinstance(low, int) and not isinstance(low, bool) and 0 < low < 100:
+            self._attr_native_min_value = low
 
     @property
     def native_value(self) -> float | None:
