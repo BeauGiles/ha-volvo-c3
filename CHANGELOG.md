@@ -13,6 +13,7 @@ Dates are 2026.
 
 ### Fixed
 
+- **The quick polling after a trip starts when the car is parked.** At the end of a trip the integration polls every 5 seconds for 5 minutes, so the lock state catches up when the car is locked, and checks the trip journal for the new trip more often. It used to wait for the car to report Abandoned, which an XC40 only does 7–10 minutes after parking, by when the driver has usually locked it and left. It now starts as soon as the car stops reporting Driving (or Engine on). A missing or unknown usage mode no longer counts as the end of a trip.
 - **The tailgate lock reads the car's own tailgate lock signal.** It used to guess from the central lock and remember a tailgate unlock sent from Home Assistant, because no separate signal was known. The exterior reply carries `tailgateLock` (seen on an XC40), so it's used when present. After an unlock from Home Assistant, the lock shows unlocked until the car sends a newer reading. Cars without the signal keep the old behaviour.
 - **The charge current slider follows the car's own range.** The car record says which currents the car accepts: 6–32 A on an Australian XC40, up to 48 A in North America. The slider was fixed at 6–32 A.
 - **The Target SoC slider starts at the car's own minimum.** The car record says the lowest target charge level the car accepts (50 % on an XC40). The slider used to start at 20 %, so values the car would refuse could be picked. When the car record doesn't say, it still starts at 20 %.

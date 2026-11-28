@@ -75,3 +75,23 @@ def test_poll_intervals_are_options_and_the_active_one_is_capped():
     assert "idle_interval=entry.options.get(CONF_IDLE_INTERVAL, POLL_IDLE)" in (root / "__init__.py").read_text()
     flow = (root / "config_flow.py").read_text()
     assert "CONF_IDLE_INTERVAL" in flow and "CONF_ACTIVE_INTERVAL" in flow
+
+
+def _avail(mode):
+    return {"availability": {"availability": {"usageMode": mode}}}
+
+
+def test_a_trip_ends_when_the_car_stops_driving_not_when_abandoned():
+    # 28 Nov 2026, XC40: DRIVING while driven, INACTIVE straight after parking, ABANDONED ~10 min later.
+    assert polltiers.on_a_trip(_avail("USAGE_MODE_DRIVING")) is True
+    assert polltiers.on_a_trip(_avail("USAGE_MODE_ENGINE_ON")) is True
+    assert polltiers.on_a_trip(_avail("USAGE_MODE_INACTIVE")) is False
+    assert polltiers.on_a_trip(_avail("USAGE_MODE_ABANDONED")) is False
+    assert polltiers.on_a_trip(_avail("USAGE_MODE_ACTIVE")) is False
+
+
+def test_no_usable_usage_mode_is_not_the_end_of_a_trip():
+    assert polltiers.on_a_trip({}) is None
+    assert polltiers.on_a_trip({"availability": None}) is None
+    assert polltiers.on_a_trip(_avail("USAGE_MODE_UNSPECIFIED")) is None
+    assert polltiers.on_a_trip(_avail("")) is None
