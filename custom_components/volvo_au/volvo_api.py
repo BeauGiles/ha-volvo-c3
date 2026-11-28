@@ -60,7 +60,7 @@ def _parse_parked_location_frame(frame: bytes) -> dict[str, Any] | None:
                 return r, p
             s += 7
 
-    # Outer: f1=vin (str), f2=position (msg)
+    # Outer: f1=vin (str), f2=position (msg), f3=stale (bool; true while an XC40 was being driven, 28 Nov 2026)
     # Position: f1=longitude (double), f2=latitude (double), f3=timestamp (msg{secs, nanos})
     out: dict[str, Any] = {}
     p = 0
@@ -76,9 +76,12 @@ def _parse_parked_location_frame(frame: bytes) -> dict[str, Any] | None:
             if fld == 2:
                 pos_buf = pay
         elif wt == 0:
-            _, p = _varint(frame, p)
+            val, p = _varint(frame, p)
+            if fld == 3:
+                out["stale"] = bool(val)
         else:
             return None
+    out.setdefault("stale", False)
     if not pos_buf:
         return None
     p = 0
@@ -1309,7 +1312,7 @@ class VolvoClient:
         )
 
     async def set_amp_limit(self, amps: int) -> dict[str, Any]:
-        """Set the AC charge current limit (6–32 A)."""
+        """Set the AC charge current limit, in amps (the car record gives the range)."""
         if not 1 <= amps <= 100:
             raise ValueError(f"amps out of range: {amps}")
         try:

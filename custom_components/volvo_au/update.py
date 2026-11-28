@@ -54,8 +54,10 @@ class VolvoSoftwareUpdate(VolvoEntity, UpdateEntity, RestoreEntity):
         self._attr_unique_id = f"{DOMAIN}_{coordinator.client.vin}_software_update"
         self._installed_cache: str | None = None
         # The car's record says whether the app may start or schedule an install (an XC40 says it may).
+        features = UpdateEntityFeature.RELEASE_NOTES
         if capability(coordinator.car_info, "supportsRemoteOtaInstallSchedule") is not False:
-            self._attr_supported_features = UpdateEntityFeature.INSTALL
+            features |= UpdateEntityFeature.INSTALL
+        self._attr_supported_features = features
 
     @property
     def entity_picture(self) -> str | None:
@@ -107,6 +109,10 @@ class VolvoSoftwareUpdate(VolvoEntity, UpdateEntity, RestoreEntity):
             return None
         summary = " · ".join(p for p in (info.get("title"), info.get("ref_label")) if p)
         return summary[:255] or None
+
+    async def async_release_notes(self) -> str | None:
+        """The full release notes the app shows, from the same GetSoftwareInfo reply."""
+        return ota.release_notes(self._info().get("release_notes"))
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

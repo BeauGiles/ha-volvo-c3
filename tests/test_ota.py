@@ -52,3 +52,17 @@ def test_states():
     assert ota.state_name({"status": 99}) == "unknown"
     assert ota.state_name({}) is None
     assert ota.is_in_progress({"status": 6}) and not ota.is_in_progress({"status": 1})
+
+
+def test_release_notes_markup_becomes_markdown():
+    # The XC40's 5.2.16 notes (28 Nov 2026 dump).
+    raw = "<textblock>This update includes minor refinements and stability improvements.</textblock><linefeed/>"
+    assert ota.release_notes(raw) == "This update includes minor refinements and stability improvements."
+    longer = (
+        "<textblock>New in this update:</textblock><linefeed/><bullet/>Faster charging &amp; more"
+        "<linefeed/><bullet/>Fixes<linefeed/><textblock>Thanks</textblock>"
+    )
+    assert ota.release_notes(longer) == "New in this update:\n\n- Faster charging & more\n\n- Fixes\nThanks"
+    assert ota.release_notes("") is None
+    assert ota.release_notes(None) is None
+    assert ota.release_notes("<linefeed/>") is None

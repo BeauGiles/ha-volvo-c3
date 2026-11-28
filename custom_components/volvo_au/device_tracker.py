@@ -55,4 +55,8 @@ class VolvoLocationTracker(VolvoEntity, TrackerEntity):
         loc = self._loc()
         if not loc:
             return None
-        return {"last_parked_timestamp": loc.get("timestamp")}
+        return {
+            "last_parked_timestamp": loc.get("timestamp"),
+            # Volvo marks the parked position out of date (seen while the car was being driven).
+            "location_stale": loc.get("stale"),
+        }
