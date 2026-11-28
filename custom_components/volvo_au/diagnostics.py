@@ -19,7 +19,7 @@ async def _extra_reads(client: Any) -> dict[str, Any]:
     """Read-only calls the integration doesn't poll, made once when diagnostics are downloaded.
 
     Raw gRPC replies are shown by field number (unknown_<n>). The gRPC car record is included because it carries
-    fields the REST car record leaves out (for example 43, 44, 45 and 92).
+    fields the REST car record leaves out (for example 43, 44, 45 and 92). Car images are links that expire.
     """
     vin_field = client._pb_len_delim(1, client.vin.encode("ascii"))
     raw = {
@@ -30,6 +30,9 @@ async def _extra_reads(client: Any) -> dict[str, Any]:
             "/onboarding.ConnectedCarContractStatusService/GetConnectedCarContractStatusByVin",
             vin_field + client._pb_len_delim(2, b"en"),
         ),
+        # The car's official pictures (as built: paint, wheels, trim). ImageDataRequest: 1 vin, 2 image size
+        # (0 = large, left out), 4 dark mode. The reply has 1 sync id, 2 expiry, 3 [{1 key, 2 urls}], 4 paint colour.
+        "car_images": ("/visualizationprovider.ImageUrlService/GetImageUrlCollections", vin_field),
     }
     jobs: dict[str, Any] = {name: client.read_raw(path, body) for name, (path, body) in raw.items()}
     # Silent while there are no errors, so a timeout here is normal.
