@@ -273,10 +273,10 @@
         "name": "Cabin PM2.5"
       },
       "avg_consumption": {
-        "name": "Average consumption"
+        "name": "Average consumption (trip)"
       },
       "avg_speed": {
-        "name": "Average speed"
+        "name": "Average speed (trip)"
       },
       "avg_speed_auto": {
         "name": "Average speed (auto)"
@@ -413,7 +413,7 @@
         "name": "Trip meter (auto)"
       },
       "trip_manual_km": {
-        "name": "Trip meter (manual)"
+        "name": "Trip meter (manual trip)"
       },
       "trips_this_month": {
         "name": "Trips this month"
