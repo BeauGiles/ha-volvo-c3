@@ -27,7 +27,7 @@ from .const import (
     POLL_POST_CMD_WINDOW,
 )
 from .livestream import STREAMS, StreamPolicy
-from .polltiers import is_active
+from .polltiers import is_active, on_a_trip
 from .powertrain import capability, sections_without_data
 from .volvo_api import VolvoApiError, VolvoAuthError, VolvoClient
 
@@ -146,28 +146,18 @@ class VolvoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Choose the next poll interval from the latest data. Returns True when it changed."""
         previous = self.update_interval
         now = time.time()
-        # Detect end-of-trip: usage_mode transitioned from in-use -> abandoned.
-        # Start a 5-min 5s burst so the lock state catches up quickly when
-        # Hien locks the car after parking. Burst clears early once the car
-        # is fully centrally locked.
+        # Detect the end of a trip: the car stops being driven. It goes DRIVING -> INACTIVE as soon as it's
+        # parked and only reaches ABANDONED minutes later, after the driver has usually locked it and left, so
+        # waiting for ABANDONED started the burst too late. Start a 5-min 5 s burst so the lock state catches up
+        # when the car is locked after parking. The burst clears early once the car is fully centrally locked.
         try:
-            avail = (snap.get("availability") or {}).get("availability") or {}
-            um = avail.get("usageMode", "")
-            in_use = bool(
-                um
-                and um
-                not in (
-                    "USAGE_MODE_ABANDONED",
-                    "USAGE_MODE_UNSPECIFIED",
-                    "USAGE_MODE_UNKNOWN",
-                )
-            )
-            if self._prev_in_use and not in_use:
-                # Just stopped using the car. Start 5-min burst.
-                self._post_trip_until = now + 300
-                self.client.expect_new_trip()
-                _LOGGER.debug("end-of-trip detected; starting 5min lock burst")
-            self._prev_in_use = in_use
+            trip = on_a_trip(snap)
+            if trip is not None:  # a missing or unknown reading neither starts nor ends a trip
+                if self._prev_in_use and not trip:
+                    self._post_trip_until = now + 300
+                    self.client.expect_new_trip()
+                    _LOGGER.debug("end of trip detected; starting 5 min lock burst")
+                self._prev_in_use = trip
         except Exception:  # noqa: BLE001
             pass
 

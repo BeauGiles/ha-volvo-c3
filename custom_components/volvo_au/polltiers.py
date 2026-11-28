@@ -103,3 +103,20 @@ def is_active(snap: dict[str, Any]) -> bool:
     except Exception:  # noqa: BLE001
         pass
     return False
+
+
+# Usage modes that mean a trip is under way. An XC40 goes DRIVING -> INACTIVE as soon as it is parked and only
+# reaches ABANDONED some 7-10 minutes later (28 Nov 2026 dumps), so the trip ends when the car leaves these.
+_TRIP_MODES = ("USAGE_MODE_DRIVING", "USAGE_MODE_ENGINE_ON")
+
+
+def on_a_trip(snap: dict[str, Any]) -> bool | None:
+    """True while the car is being driven, False once it isn't, None when there is no usable usage mode.
+
+    None (no availability reading, or UNSPECIFIED / UNKNOWN) must not be taken as the end of a trip.
+    """
+    avail = ((snap.get("availability") or {}).get("availability") or {}) if isinstance(snap, dict) else {}
+    um = avail.get("usageMode")
+    if not isinstance(um, str) or not um.startswith("USAGE_MODE_") or um.endswith(("_UNSPECIFIED", "_UNKNOWN")):
+        return None
+    return um in _TRIP_MODES
