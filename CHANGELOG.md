@@ -35,6 +35,7 @@ Dates are 2026.
 
 ### Fixed
 
+- **The OTA schedule's `relative_time` in diagnostics is now -2 when nothing is scheduled.** It used to show as 18446744073709551614, because the negative number was read as unsigned. Matches Polestar C3.
 - **The alarm sensor now reads the car's alarm.** It looked for `alarmStatus`, which the car never sends. The car sends `alarm`, for example `ALARM_STATUS_IDLE` on a parked XC40, so Alarm triggered could never turn on. The old key is still read as a fallback. Matches Polestar C3.
 - **The quick polling after a trip starts when the car is parked.** At the end of a trip the integration polls every 5 seconds for 5 minutes, so the lock state catches up when the car is locked, and checks the trip journal for the new trip more often. It used to wait for the car to report Abandoned, which an XC40 only does 7–10 minutes after parking, by when the driver has usually locked it and left. It now starts as soon as the car stops reporting Driving (or Engine on). A missing or unknown usage mode no longer counts as the end of a trip.
 - **The tailgate lock reads the car's own tailgate lock signal.** It used to guess from the central lock and remember a tailgate unlock sent from Home Assistant, because no separate signal was known. The exterior reply carries `tailgateLock` (seen on an XC40), so it's used when present. After an unlock from Home Assistant, the lock shows unlocked until the car sends a newer reading. Cars without the signal keep the old behaviour.

@@ -66,3 +66,9 @@ def test_release_notes_markup_becomes_markdown():
     assert ota.release_notes("") is None
     assert ota.release_notes(None) is None
     assert ota.release_notes("<linefeed/>") is None
+
+
+def test_nothing_scheduled_reads_as_minus_two():
+    # As an XC40 sends it when idle (28 Nov 2026): relative_time -2 as a 10-byte varint.
+    scheduler = _var(2, (1 << 64) - 2)
+    assert ota.parse_scheduler_reply(_len(1, scheduler))["relative_time"] == -2

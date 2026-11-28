@@ -92,7 +92,8 @@ def parse_scheduler(buf: bytes) -> dict[str, Any]:
         if field == 1 and wire == 0:
             out["status"] = SCHEDULE_STATUSES.get(value, "unknown")
         elif field == 2 and wire == 0:
-            out["relative_time"] = value
+            # int32 in the app: -2 (nothing scheduled) arrives as a 10-byte two's complement varint.
+            out["relative_time"] = value - (1 << 64) if value >= 1 << 63 else value
         elif field == 3 and wire == 2:
             out["scheduled_time"] = iso(timestamp_seconds(value))
         elif field == 4 and wire == 2:
