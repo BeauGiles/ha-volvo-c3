@@ -124,6 +124,20 @@ def test_entity_categories_follow_the_polestar_integration(volvo):
     assert getattr(volvo.number.VolvoTargetSoc, "_attr_entity_category", None) is None
 
 
+@pytest.mark.parametrize(
+    ("car_info", "expected"),
+    [
+        ({"targetChargeLevelPercentageMinLimit": 50}, 50),  # XC40, 28 Nov 2026 car record
+        ({"targetChargeLevelPercentageMinLimit": None}, 20),
+        ({}, 20),
+        (None, 20),
+    ],
+)
+def test_target_soc_slider_starts_at_the_cars_lowest_level(volvo, car_info, expected):
+    coordinator = SimpleNamespace(car_info=car_info, client=SimpleNamespace(vin="VIN"))
+    assert volvo.number.VolvoTargetSoc(coordinator)._attr_native_min_value == expected
+
+
 def test_every_gating_flag_in_the_tables_is_a_known_capability_name(volvo):
     flags = {d.requires_capability for d in volvo.sensor.SENSORS if d.requires_capability}
     flags |= {d.requires_capability for d in volvo.binary_sensor.DESCRIPTIONS if d.requires_capability}
