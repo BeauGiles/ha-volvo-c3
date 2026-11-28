@@ -57,6 +57,6 @@ class VolvoLocationTracker(VolvoEntity, TrackerEntity):
             return None
         return {
             "last_parked_timestamp": loc.get("timestamp"),
-            # Volvo marks the parked position out of date (seen while the car was being driven).
+            # Volvo marks the parked position out of date: true while an XC40 was driven, cleared once it parked.
             "location_stale": loc.get("stale"),
         }

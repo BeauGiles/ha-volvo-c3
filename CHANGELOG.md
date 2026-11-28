@@ -9,7 +9,7 @@ Dates are 2026.
 ### Added
 
 - **The software update shows its full release notes.** Volvo sends the app's release notes with the update details; the update entity now offers them under "Release notes", converted from Volvo's markup to plain text. The short summary is unchanged.
-- **The car tracker says when its parked position is out of date.** A `location_stale` attribute carries Volvo's own flag. It was true while an XC40 was being driven, when the tracker still shows where the car last parked.
+- **The car tracker says when its parked position is out of date.** A `location_stale` attribute carries Volvo's own flag. It's true while the car is being driven, when the tracker still shows where it last parked, and clears once it parks again (seen on an XC40).
 
 ### Fixed
 

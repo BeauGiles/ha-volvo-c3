@@ -60,7 +60,7 @@ def _parse_parked_location_frame(frame: bytes) -> dict[str, Any] | None:
                 return r, p
             s += 7
 
-    # Outer: f1=vin (str), f2=position (msg), f3=stale (bool; true while an XC40 was being driven, 28 Nov 2026)
+    # Outer: f1=vin (str), f2=position (msg), f3=stale (bool; true while an XC40 was driven, absent once parked, 28 Nov 2026)
     # Position: f1=longitude (double), f2=latitude (double), f3=timestamp (msg{secs, nanos})
     out: dict[str, Any] = {}
     p = 0
