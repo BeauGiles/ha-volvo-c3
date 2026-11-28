@@ -57,7 +57,7 @@ Volvo C3 and [Polestar C3](https://github.com/BeauGiles/ha-polestar-c3) talk to 
 | Engine coolant low | ✅ | ✅ |
 | Oil level (combustion cars) | ◐ | ➖ |
 | Climate active, status and time remaining | 🧪 | ✅ |
-| Cabin air quality | ✅ | ✅ |
+| Cabin PM2.5 | ✅ | ✅ |
 | Software version | ✅ | ✅ |
 | Driving journal: last trip, trips and distance this month (opt in) | ✅ | ➖ |
 | VIN, vehicle info, registration plate | ✅ | ✅ |

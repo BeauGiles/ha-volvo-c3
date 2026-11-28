@@ -6,6 +6,8 @@ Dates are 2026.
 
 ## Unreleased
 
+## 0.5.0 (28 November)
+
 ### Added
 
 - **Has the car got the change yet?**
@@ -32,6 +34,10 @@ Dates are 2026.
 - **Diagnostics include a few read-only calls the integration doesn't poll,** made once when diagnostics are downloaded: car preview, the gRPC car record (with fields the REST record leaves out, such as 43, 44, 45 and 92), Plug & Charge on/off, connected car contract and the error stream. Their fields are shown by number. The battery pack serial, PCID, visual ID and registration are removed from every value, not only from known keys.
 - **The software update shows its full release notes.** Volvo sends the app's release notes with the update details; the update entity now offers them under "Release notes", converted from Volvo's markup to plain text. The short summary is unchanged.
 - **The car tracker says when its parked position is out of date.** A `location_stale` attribute carries Volvo's own flag. It's true while the car is being driven, when the tracker still shows where it last parked, and clears once it parks again (seen on an XC40).
+
+### Changed
+
+- **The Cabin air quality index sensor is now called Cabin PM2.5.** It has always shown PM2.5 in µg/m³, not the car's air quality index, which is now the `air_quality_index` attribute on Air purification last cycle. Only the display name changes: the entity ID, history and automations are the same. Matches Polestar C3.
 
 ### Fixed
 
