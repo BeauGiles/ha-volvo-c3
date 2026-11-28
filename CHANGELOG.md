@@ -8,6 +8,12 @@ Dates are 2026.
 
 ### Added
 
+- **Charge now.** A binary sensor shows whether charge now is overriding the charge timer, from the same state the app reads (`GetEnabledOverrideChargeTimerAction`). Its attributes say the exact state, including pending, and which charge-now button the app offers (`charge_now`, `resume_schedule` or `not_applicable`). It's shown when the car record says `supportsChargeNowTimerOverride`, as an XC40's does. Matches Polestar C3.
+- **Last charging error.** A diagnostic timestamp sensor listens to the backend's error stream, which stays silent until the car can't apply a change to charging or the climate timers. It then shows when that happened, with `setting`, `error` and `action` attributes, for example charge now, `car`, `start_override_charge_timer`. Its state changes, so automations can trigger on it. It runs with the live updates option. Matches Polestar C3.
+- **The software update shows when the current software was installed.** An `installed_at` attribute comes from a field in the gRPC car record that neither app names (92); the REST car record doesn't have it. On an XC40 it's 4 Oct 2026, about 47 s after the 5.2.16 install finished. It's read every 6 hours and right after an install completes.
+- **Vehicle info shows the data sharing consent:** `data_sharing_enabled`, `data_sharing_car_in_sync` and `data_sharing_read_only`. Remote commands can fail while it's off. Read every hour.
+- **The VIN sensor shows the vehicle type code** from the car record: 536 for an XC40 / EX40, 534 for a Polestar 2.
+- **Diagnostics include a few read-only calls the integration doesn't poll,** made once when diagnostics are downloaded: car preview, the gRPC car record (with fields the REST record leaves out, such as 43, 44, 45 and 92), Plug & Charge on/off, connected car contract and the error stream. Their fields are shown by number. The battery pack serial, PCID, visual ID and registration are removed from every value, not only from known keys.
 - **The software update shows its full release notes.** Volvo sends the app's release notes with the update details; the update entity now offers them under "Release notes", converted from Volvo's markup to plain text. The short summary is unchanged.
 - **The car tracker says when its parked position is out of date.** A `location_stale` attribute carries Volvo's own flag. It's true while the car is being driven, when the tracker still shows where it last parked, and clears once it parks again (seen on an XC40).
 

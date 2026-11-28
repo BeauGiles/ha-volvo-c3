@@ -16,6 +16,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import chronos
 from .const import DOMAIN
 from .coordinator import VolvoCoordinator
 from .entity import VolvoEntity, async_gate_unsupported, async_remove_registered_entities
@@ -377,6 +378,14 @@ DESCRIPTIONS: tuple[VolvoBinaryDescription, ...] = (
         device_class=BinarySensorDeviceClass.RUNNING,
         requires_data="parking_climatization",
         value_fn=climate_active,
+    ),
+    VolvoBinaryDescription(
+        key="charge_now",
+        translation_key="charge_now",
+        icon="mdi:ev-station",
+        requires_capability="supportsChargeNowTimerOverride",
+        value_fn=lambda s: chronos.charge_now_active(s.get("charge_now")),
+        attrs_fn=lambda s: chronos.charge_now_attributes(s.get("charge_now")),
     ),
     VolvoBinaryDescription(
         key="in_use",

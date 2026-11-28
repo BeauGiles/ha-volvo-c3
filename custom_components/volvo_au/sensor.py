@@ -35,6 +35,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import chronos
 from .const import DOMAIN
 from .coordinator import VolvoCoordinator
 from .entity import VolvoEntity, async_gate_unsupported, async_remove_registered_entities
@@ -560,7 +561,7 @@ async def async_setup_entry(
             "async_get_trips_summary",
             supports_response=SupportsResponse.ONLY,
         )
-    async_add_entities([VolvoLocationAddress(coordinator), VolvoSoftwareVersion(coordinator), VolvoVin(coordinator), VolvoVehicleInfo(coordinator), VolvoConnection(coordinator)])
+    async_add_entities([VolvoLocationAddress(coordinator), VolvoSoftwareVersion(coordinator), VolvoVin(coordinator), VolvoVehicleInfo(coordinator), VolvoConnection(coordinator), VolvoChargingError(coordinator)])
 
 
 class VolvoSensor(VolvoEntity, SensorEntity):
@@ -780,6 +781,8 @@ class VolvoVin(VolvoEntity, SensorEntity):
             "build_week": build_week(c.car_info),
             "powertrain": engine_type(c.car_info),
             "drivetrain": drivetrain_type(c.car_info),
+            # The type code from the car record: 536 = XC40 / EX40, 534 = Polestar 2.
+            "vehicle_type_code": (c.car_info or {}).get("modelCode"),
         }
         return {k: v for k, v in attrs.items() if v}
 
@@ -825,12 +828,46 @@ class VolvoVehicleInfo(VolvoEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         car = {k: v for k, v in (self.coordinator.car_info or {}).items() if k != "vin"}
+        sharing = (self.coordinator.data or {}).get("data_sharing")
+        sharing = sharing if isinstance(sharing, dict) and "_error" not in sharing else {}
         return {
             "powertrain": engine_type(self.coordinator.car_info),
             "drivetrain": drivetrain_type(self.coordinator.car_info),
             "battery_capacity_kwh": car_battery_capacity_kwh(self.coordinator.car_info),
+            # The "share remote function data" consent. Remote commands can fail while it's off.
+            "data_sharing_enabled": sharing.get("enabled"),
+            "data_sharing_car_in_sync": sharing.get("car_in_sync"),
+            "data_sharing_read_only": sharing.get("read_only"),
             **flatten_attributes(car),
         }
+
+
+class VolvoChargingError(VolvoEntity, SensorEntity):
+    """When the car last couldn't apply a charging or climate timer change, from the chronos error stream.
+
+    The stream is silent while all is well, so this stays unknown until the first error after startup.
+    """
+
+    _attr_translation_key = "charging_error"
+    _attr_icon = "mdi:ev-plug-type2"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: VolvoCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{DOMAIN}_{coordinator.client.vin}_charging_error"
+
+    def _frame(self) -> dict[str, Any] | None:
+        frame = (self.coordinator.data or {}).get("charging_error")
+        return frame if isinstance(frame, dict) else None
+
+    @property
+    def native_value(self) -> datetime | None:
+        return chronos.error_time(self._frame())
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return chronos.error_attributes(self._frame())
 
 
 class VolvoSoftwareVersion(VolvoEntity, SensorEntity):
